@@ -6,7 +6,6 @@ const raw_body_1 = require("./raw-body");
 class Router extends KoaRouter {
     constructor(ffs) {
         super();
-        this.ffs = ffs;
         this.all('/:path*', async (ctx, next) => {
             // https://github.com/microsoft/TypeScript/issues/36931
             const assert = ctx.assert;
@@ -22,12 +21,14 @@ class Router extends KoaRouter {
         });
         this.get('/:path*', async (ctx, next) => {
             try {
-                const content = ffs.retrieveFile(ctx.state.root, ctx.state.path[Symbol.iterator]());
-                if (content instanceof Buffer) {
+                const fileId = ffs.retrieveFile(ctx.state.root, ctx.state.path[Symbol.iterator]());
+                try {
+                    const content = ffs.getRegularFileView(fileId);
                     ctx.body = content.toString();
                     ctx.type = 'text/markdown';
                 }
-                else {
+                catch (err) {
+                    const content = ffs.getDirectoryViewUnsafe(fileId);
                     ctx.body = content;
                 }
                 await next();

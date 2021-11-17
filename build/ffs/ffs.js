@@ -56,6 +56,7 @@ class FunctionalFileSystem {
             WHERE id = ?
         ;`).safeIntegers(true);
         const row = stmt.get(id);
+        assert(row);
         return row.firstVersionId;
     }
     makeRegularFile(rtime, mtime, content, modifiedFromId) {
@@ -175,13 +176,7 @@ class FunctionalFileSystem {
     retrieveFile(rootId, pathIter) {
         const iterResult = pathIter.next();
         if (iterResult.done) {
-            const fileId = rootId;
-            try {
-                return this.getRegularFileView(fileId);
-            }
-            catch (err) {
-                return this.getDirectoryViewUnsafe(fileId);
-            }
+            return rootId;
         }
         else {
             const parentId = rootId;

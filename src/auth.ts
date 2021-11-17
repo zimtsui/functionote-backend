@@ -1,4 +1,3 @@
-import { FunctionalFileSystem } from './ffs/ffs';
 import KoaPassport = require('koa-passport');
 import PassportHttp = require('passport-http');
 import { Users } from './users';

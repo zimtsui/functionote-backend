@@ -1,7 +1,6 @@
 import KoaRouter = require('@koa/router');
 import {
     BranchId, FileId,
-    RegularFileContent,
 } from './interfaces';
 import { FunctionalFileSystem } from './ffs/ffs';
 import { getRawBody } from './raw-body';
@@ -19,7 +18,7 @@ export interface State {
 
 
 export class Router extends KoaRouter<State> {
-    constructor(private ffs: FunctionalFileSystem) {
+    constructor(ffs: FunctionalFileSystem) {
         super();
 
         this.all('/:path*', async (ctx, next) => {
@@ -38,14 +37,16 @@ export class Router extends KoaRouter<State> {
 
         this.get('/:path*', async (ctx, next) => {
             try {
-                const content = ffs.retrieveFile(
+                const fileId = ffs.retrieveFile(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                 );
-                if (content instanceof Buffer) {
+                try {
+                    const content = ffs.getRegularFileView(fileId);
                     ctx.body = content.toString();
                     ctx.type = 'text/markdown';
-                } else {
+                } catch (err) {
+                    const content = ffs.getDirectoryViewUnsafe(fileId);
                     ctx.body = content;
                 }
                 await next();

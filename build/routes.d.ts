@@ -11,6 +11,5 @@ export interface State {
     body: Buffer;
 }
 export declare class Router extends KoaRouter<State> {
-    private ffs;
     constructor(ffs: FunctionalFileSystem);
 }

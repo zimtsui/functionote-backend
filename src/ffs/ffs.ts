@@ -2,10 +2,9 @@ import Sqlite = require('better-sqlite3');
 import assert = require('assert');
 import {
     RegularFileContent, DirectoryContent, DirectoryContentItem,
-    File, Directory, RegularFile,
-    FileView, DirectoryView, RegularFileView,
-    isRegularFileContentView,
-    FileMetadata, DirectoryMetadata, RegularFileMetadata,
+    Directory, RegularFile,
+    DirectoryView, RegularFileView,
+    FileMetadata,
     FileType, FileId, PathIterator,
 } from './interfaces';
 import _ = require('lodash');
@@ -78,7 +77,8 @@ export class FunctionalFileSystem {
             FROM files_metadata
             WHERE id = ?
         ;`).safeIntegers(true);
-        const row = <{ firstVersionId: bigint }>stmt.get(id);
+        const row = <{ firstVersionId: bigint } | undefined>stmt.get(id);
+        assert(row);
         return row.firstVersionId;
     }
 
@@ -172,7 +172,7 @@ export class FunctionalFileSystem {
         }));
     }
 
-    private getDirectory(id: FileId): Directory {
+    public getDirectory(id: FileId): Directory {
         const fileMetadata = this.getFileMetadata(id);
         assert(fileMetadata.type === 'd');
         return {
@@ -192,7 +192,7 @@ export class FunctionalFileSystem {
         return row.content;
     }
 
-    private getRegularFile(id: FileId): RegularFile {
+    public getRegularFile(id: FileId): RegularFile {
         const stmt = this.db.prepare(`
             SELECT
                 type,
@@ -221,7 +221,7 @@ export class FunctionalFileSystem {
         };
     }
 
-    private getDirectoryViewUnsafe(id: FileId): DirectoryView {
+    public getDirectoryViewUnsafe(id: FileId): DirectoryView {
         const rows = <{
             name: string;
             type: FileType;
@@ -239,22 +239,17 @@ export class FunctionalFileSystem {
         return rows;
     }
 
-    private getRegularFileView(id: FileId): RegularFileView {
+    public getRegularFileView(id: FileId): RegularFileView {
         return this.getRegularFileContent(id);
     }
 
     public retrieveFile(
         rootId: FileId,
         pathIter: PathIterator,
-    ): FileView {
+    ): FileId {
         const iterResult = pathIter.next();
         if (iterResult.done) {
-            const fileId = rootId;
-            try {
-                return this.getRegularFileView(fileId);
-            } catch (err) {
-                return this.getDirectoryViewUnsafe(fileId);
-            }
+            return rootId;
         } else {
             const parentId = rootId;
             const childName = iterResult.value;
