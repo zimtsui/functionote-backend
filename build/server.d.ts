@@ -4,5 +4,7 @@ export declare class Server extends Koa {
     private db;
     private ffs;
     private router;
+    private users;
+    private passportMiddleware;
     constructor();
 }

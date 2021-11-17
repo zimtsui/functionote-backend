@@ -1,8 +1,9 @@
 import KoaRouter = require('@koa/router');
 import {
     BranchId, FileId,
+    RegularFileContent,
 } from './interfaces';
-import { FunctionalFileSystem } from './ffs';
+import { FunctionalFileSystem } from './ffs/ffs';
 import { getRawBody } from './raw-body';
 import httpAssert = require('http-assert');
 type Assert = httpAssert.AssertOK;
@@ -60,8 +61,13 @@ export class Router extends KoaRouter<State> {
                 const fileId = ctx.request.type === 'text/markdown'
                     ? ffs.makeRegularFile(
                         ctx.state.time,
+                        ctx.state.time,
                         ctx.state.body,
-                    ) : ffs.makeDirectory(ctx.state.time, []);
+                    ) : ffs.makeDirectory(
+                        ctx.state.time,
+                        ctx.state.time,
+                        [],
+                    );
                 const newRootId = ffs.createFile(
                     ctx.state.root,
                     path[Symbol.iterator](),
@@ -81,12 +87,18 @@ export class Router extends KoaRouter<State> {
                 const fileId = ctx.request.type === 'text/markdown'
                     ? ffs.makeRegularFile(
                         ctx.state.time,
+                        ctx.state.time,
                         ctx.state.body,
-                    ) : ffs.makeDirectory(ctx.state.time, []);
+                    ) : ffs.makeDirectory(
+                        ctx.state.time,
+                        ctx.state.time,
+                        [],
+                    );
                 const newRootId = ffs.updateFile(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                     fileId,
+                    ctx.state.time,
                 );
                 ctx.response.set('ROOT-FILE-ID', newRootId.toString());
                 await next();

@@ -3,11 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createPassportMiddleware = void 0;
 const KoaPassport = require("koa-passport");
 const PassportHttp = require("passport-http");
-function createPassportMiddleware(ffs) {
+function createPassportMiddleware(users) {
     const passport = new KoaPassport.Passport();
     const basicAuth = new PassportHttp.BasicStrategy((username, password, done) => {
         try {
-            const userProfile = ffs.getUserProfile(username);
+            const userProfile = users.getUserProfile(username);
             if (password === userProfile.password)
                 done(null, userProfile.id);
             else

@@ -1,2 +1,2 @@
-import { FunctionalFileSystem } from './ffs';
-export declare function createPassportMiddleware(ffs: FunctionalFileSystem): any;
+import { Users } from './users';
+export declare function createPassportMiddleware(users: Users): any;

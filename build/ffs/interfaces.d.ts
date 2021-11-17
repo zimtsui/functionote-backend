@@ -1,0 +1,43 @@
+/// <reference types="node" />
+export declare type FileType = '-' | 'd';
+export declare type FileId = bigint;
+export declare type PathIterator = Iterator<string>;
+interface FileGenericMetadata {
+    id: FileId;
+    mtime: number;
+    rtime: number;
+    previousVersionId: FileId;
+    firstVersionId: FileId;
+}
+export interface RegularFileMetadata extends FileGenericMetadata {
+    type: '-';
+}
+export interface DirectoryMetadata extends FileGenericMetadata {
+    type: 'd';
+}
+export declare type FileMetadata = RegularFileMetadata | DirectoryMetadata;
+export declare type RegularFileContent = Buffer;
+export interface DirectoryContentItem {
+    id: FileId;
+    name: string;
+    ctime: number;
+}
+export declare type DirectoryContent = DirectoryContentItem[];
+export interface RegularFile extends RegularFileMetadata {
+    content: RegularFileContent;
+}
+export interface Directory extends DirectoryMetadata {
+    content: DirectoryContent;
+}
+export declare type File = RegularFile | Directory;
+export declare type RegularFileView = RegularFileContent;
+interface DirectoryContentItemView {
+    name: string;
+    type: FileType;
+    ctime: number;
+    mtime: number;
+}
+export declare type DirectoryView = DirectoryContentItemView[];
+export declare type FileView = RegularFileView | DirectoryView;
+export declare function isRegularFileContentView(fileContentView: FileView): fileContentView is RegularFileView;
+export {};
