@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isRegularFileContentView = void 0;
+exports.isRegularFileContentView = exports.isRegularFileContent = void 0;
+function isRegularFileContent(fileContent) {
+    return fileContent instanceof Buffer;
+}
+exports.isRegularFileContent = isRegularFileContent;
 function isRegularFileContentView(fileContentView) {
     return fileContentView instanceof Buffer;
 }

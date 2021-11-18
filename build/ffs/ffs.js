@@ -2,8 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FunctionalFileSystem = void 0;
 const assert = require("assert");
+const interfaces_1 = require("./interfaces");
 const _ = require("lodash");
-class FunctionalFileSystem {
+class FunctionalFileSystemKernel {
     constructor(db) {
         this.db = db;
     }
@@ -152,7 +153,7 @@ class FunctionalFileSystem {
     getRegularFileView(id) {
         return this.getRegularFileContent(id);
     }
-    retrieveFile(rootId, pathIter) {
+    retrieveFileId(rootId, pathIter) {
         const iterResult = pathIter.next();
         if (iterResult.done) {
             return rootId;
@@ -161,10 +162,10 @@ class FunctionalFileSystem {
             const parentId = rootId;
             const childName = iterResult.value;
             const childId = this.getDirectoryContentItemByName(parentId, childName).id;
-            return this.retrieveFile(childId, pathIter);
+            return this.retrieveFileId(childId, pathIter);
         }
     }
-    createFile(rootId, dirPathIter, newFileId, newFileName, creationTime) {
+    createFileFromId(rootId, dirPathIter, newFileName, newFileId, creationTime) {
         const iterResult = dirPathIter.next();
         if (iterResult.done) {
             const parentId = rootId;
@@ -186,7 +187,7 @@ class FunctionalFileSystem {
             const childItem = parentContent.find(child => child.name === childName);
             assert(childItem !== undefined);
             const newChild = {
-                id: this.createFile(childItem.id, dirPathIter, newFileId, newFileName, creationTime),
+                id: this.createFileFromId(childItem.id, dirPathIter, newFileName, newFileId, creationTime),
                 name: childItem.name,
                 ctime: childItem.ctime
             };
@@ -197,6 +198,12 @@ class FunctionalFileSystem {
             const newParentId = this.makeDirectory(creationTime, parentDirectory.mtime, newParentContent, parentId);
             return newParentId;
         }
+    }
+    createFile(rootId, dirPathIter, fileName, content, creationTime) {
+        const fileId = (0, interfaces_1.isRegularFileContent)(content)
+            ? this.makeRegularFile(creationTime, creationTime, content)
+            : this.makeDirectory(creationTime, creationTime, content);
+        return this.createFileFromId(rootId, dirPathIter, fileName, fileId, creationTime);
     }
     deleteFile(rootId, pathIter, deletionTime) {
         const iterResult = pathIter.next();
@@ -233,9 +240,10 @@ class FunctionalFileSystem {
             }
         }
     }
-    updateFile(rootId, pathIter, newFileId, updatingTime) {
+    updateFile(rootId, pathIter, newFileContent, updatingTime) {
         const iterResult = pathIter.next();
         if (iterResult.done) {
+            const newFileId = this.makeRegularFile(updatingTime, updatingTime, newFileContent, rootId);
             return newFileId;
         }
         else {
@@ -246,7 +254,7 @@ class FunctionalFileSystem {
             const child = parentContent.find(child => child.name === newChildName);
             assert(child !== undefined);
             const newChild = {
-                id: this.updateFile(child.id, pathIter, newFileId, updatingTime),
+                id: this.updateFile(child.id, pathIter, newFileContent, updatingTime),
                 name: child.name,
                 ctime: child.ctime,
             };
@@ -256,6 +264,82 @@ class FunctionalFileSystem {
                 .value();
             const newParentId = this.makeDirectory(updatingTime, parentMetadata.mtime, newParentContent, parentId);
             return newParentId;
+        }
+    }
+}
+class FunctionalFileSystem extends FunctionalFileSystemKernel {
+    startTransaction() {
+        this.db.prepare(`
+            BEGIN TRANSACTION;
+        `).run();
+    }
+    commitTransaction() {
+        this.db.prepare(`
+            COMMIT;
+        `).run();
+    }
+    rollbackTransaction() {
+        this.db.prepare(`
+            ROLLBACK;
+        `).run();
+    }
+    retrieveFileView(rootId, pathIter) {
+        const fileId = super.retrieveFileId(rootId, pathIter);
+        try {
+            const content = super.getRegularFileView(fileId);
+            return content;
+        }
+        catch (err) {
+            const content = super.getDirectoryViewUnsafe(fileId);
+            return content;
+        }
+    }
+    createFileFromId(rootId, dirPathIter, fileName, newFileId, creationTime) {
+        try {
+            this.startTransaction();
+            const fileId = super.createFileFromId(rootId, dirPathIter, fileName, newFileId, creationTime);
+            this.commitTransaction();
+            return fileId;
+        }
+        catch (err) {
+            this.rollbackTransaction();
+            throw err;
+        }
+    }
+    createFile(rootId, dirPathIter, fileName, content, creationTime) {
+        try {
+            this.startTransaction();
+            const fileId = super.createFile(rootId, dirPathIter, fileName, content, creationTime);
+            this.commitTransaction();
+            return fileId;
+        }
+        catch (err) {
+            this.rollbackTransaction();
+            throw err;
+        }
+    }
+    deleteFile(rootId, pathIter, deletionTime) {
+        try {
+            this.startTransaction();
+            const fileId = super.deleteFile(rootId, pathIter, deletionTime);
+            this.commitTransaction();
+            return fileId;
+        }
+        catch (err) {
+            this.rollbackTransaction();
+            throw err;
+        }
+    }
+    updateFile(rootId, pathIter, newFileContent, updatingTime) {
+        try {
+            this.startTransaction();
+            const fileId = super.updateFile(rootId, pathIter, newFileContent, updatingTime);
+            this.commitTransaction();
+            return fileId;
+        }
+        catch (err) {
+            this.rollbackTransaction();
+            throw err;
         }
     }
 }

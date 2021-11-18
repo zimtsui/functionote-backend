@@ -16,8 +16,8 @@ type KoaRouterContext<
     > = Parameters<KoaRouter.Middleware<StateT, ContextT>>[0];
 
 
-export class Server extends Koa {
-    private db = new Database('./functionote.db', { fileMustExist: true });
+export class App extends Koa {
+    private db = new Database('../functionote.db', { fileMustExist: true });
     private ffs = new FunctionalFileSystem(this.db);
     private users = new Users(this.db);
     private profileMiddleware = new ProfileRouter(this.users).routes();
@@ -28,7 +28,7 @@ export class Server extends Koa {
         super();
         this.use(this.passportMiddleware);
         this.use(async (ctx, next) => {
-            if (typeof ctx.headers['branch-id'] === 'string')
+            if (ctx.headers['branch-id'] !== undefined)
                 await this.fileMiddleware(
                     <KoaRouterContext<FileRouterState, ProfileRouterContext>>ctx,
                     next,

@@ -29,6 +29,11 @@ export interface DirectoryContentItem {
     ctime: number;
 }
 export type DirectoryContent = DirectoryContentItem[];
+export type FileContent = RegularFileContent | DirectoryContent;
+export function isRegularFileContent(fileContent: FileContent)
+    : fileContent is RegularFileContent {
+    return fileContent instanceof Buffer;
+}
 
 
 // File

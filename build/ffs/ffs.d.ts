@@ -1,21 +1,33 @@
 import Sqlite = require('better-sqlite3');
-import { RegularFileContent, DirectoryContent, Directory, RegularFile, DirectoryView, RegularFileView, FileMetadata, FileId, PathIterator } from './interfaces';
-export declare class FunctionalFileSystem {
-    private db;
+import { RegularFileContent, DirectoryContent, DirectoryContentItem, Directory, RegularFile, DirectoryView, RegularFileView, FileView, FileMetadata, FileContent, FileId, PathIterator } from './interfaces';
+declare class FunctionalFileSystemKernel {
+    protected db: Sqlite.Database;
     constructor(db: Sqlite.Database);
     getFileMetadata(id: FileId): FileMetadata;
-    private getDirectoryContentItemByName;
+    getDirectoryContentItemByName(parentId: FileId, childName: string): DirectoryContentItem;
     private makeUniqueFileId;
-    makeRegularFile(rtime: number, mtime: number, content: RegularFileContent, modifiedFromId?: FileId): FileId;
-    makeDirectory(rtime: number, mtime: number, content: DirectoryContent, modifiedFromId?: FileId): FileId;
-    private getDirectoryContentUnsafe;
+    private makeRegularFile;
+    private makeDirectory;
+    getDirectoryContentUnsafe(id: FileId): DirectoryContent;
     getDirectory(id: FileId): Directory;
-    private getRegularFileContent;
+    getRegularFileContent(id: FileId): RegularFileContent;
     getRegularFile(id: FileId): RegularFile;
     getDirectoryViewUnsafe(id: FileId): DirectoryView;
     getRegularFileView(id: FileId): RegularFileView;
-    retrieveFile(rootId: FileId, pathIter: PathIterator): FileId;
-    createFile(rootId: FileId, dirPathIter: PathIterator, newFileId: FileId, newFileName: string, creationTime: number): FileId;
-    deleteFile(rootId: FileId, pathIter: PathIterator, deletionTime: number): FileId | null;
-    updateFile(rootId: FileId, pathIter: PathIterator, newFileId: FileId, updatingTime: number): FileId;
+    retrieveFileId(rootId: FileId, pathIter: PathIterator): FileId;
+    protected createFileFromId(rootId: FileId, dirPathIter: PathIterator, newFileName: string, newFileId: FileId, creationTime: number): FileId;
+    protected createFile(rootId: FileId, dirPathIter: PathIterator, fileName: string, content: FileContent, creationTime: number): FileId;
+    protected deleteFile(rootId: FileId, pathIter: PathIterator, deletionTime: number): FileId | null;
+    protected updateFile(rootId: FileId, pathIter: PathIterator, newFileContent: RegularFileContent, updatingTime: number): FileId;
 }
+export declare class FunctionalFileSystem extends FunctionalFileSystemKernel {
+    private startTransaction;
+    private commitTransaction;
+    private rollbackTransaction;
+    retrieveFileView(rootId: FileId, pathIter: PathIterator): FileView;
+    createFileFromId(rootId: FileId, dirPathIter: PathIterator, fileName: string, newFileId: FileId, creationTime: number): FileId;
+    createFile(rootId: FileId, dirPathIter: PathIterator, fileName: string, content: FileContent, creationTime: number): FileId;
+    deleteFile(rootId: FileId, pathIter: PathIterator, deletionTime: number): FileId | null;
+    updateFile(rootId: FileId, pathIter: PathIterator, newFileContent: RegularFileContent, updatingTime: number): FileId;
+}
+export {};

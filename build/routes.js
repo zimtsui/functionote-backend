@@ -5,6 +5,7 @@ const KoaRouter = require("@koa/router");
 const raw_body_1 = require("./raw-body");
 const _ = require("lodash");
 const assert = require("assert");
+const interfaces_1 = require("./ffs/interfaces");
 class ProfileRouter extends KoaRouter {
     constructor(users) {
         super();
@@ -31,7 +32,6 @@ class FileRouter extends KoaRouter {
                 assert(Number.isInteger(ctx.state.branch));
                 assert(typeof ctx.headers['root-file-id'] === 'string');
                 ctx.state.root = BigInt(ctx.headers['root-file-id']);
-                assert(Number.isInteger(ctx.state.root));
                 assert(typeof ctx.headers['time'] === 'string');
                 ctx.state.time = Number.parseInt(ctx.headers['time']);
                 assert(Number.isInteger(ctx.state.time));
@@ -52,16 +52,13 @@ class FileRouter extends KoaRouter {
                     ctx.status = 400;
                     return;
                 }
-                const fileId = ffs.retrieveFile(ctx.state.root, ctx.state.path[Symbol.iterator]());
-                try {
-                    const content = ffs.getRegularFileView(fileId);
+                const content = ffs.retrieveFileView(ctx.state.root, ctx.state.path[Symbol.iterator]());
+                if ((0, interfaces_1.isRegularFileContentView)(content)) {
                     ctx.body = content.toString();
                     ctx.type = 'text/markdown';
                 }
-                catch (err) {
-                    const content = ffs.getDirectoryViewUnsafe(fileId);
+                else
                     ctx.body = content;
-                }
                 await next();
             }
             catch (err) {
@@ -79,9 +76,9 @@ class FileRouter extends KoaRouter {
                 }
                 const path = _.dropRight(ctx.state.path);
                 const fileName = _.last(ctx.state.path);
-                const fileId = ctx.request.type === 'text/markdown'
-                    ? ffs.makeRegularFile(ctx.state.time, ctx.state.time, ctx.state.body) : ffs.makeDirectory(ctx.state.time, ctx.state.time, []);
-                const newRootId = ffs.createFile(ctx.state.root, path[Symbol.iterator](), fileId, fileName, ctx.state.time);
+                const newRootId = ffs.createFile(ctx.state.root, path[Symbol.iterator](), fileName, ctx.is('text/markdown')
+                    ? ctx.state.body
+                    : [], ctx.state.time);
                 ctx.response.set('ROOT-FILE-ID', newRootId.toString());
                 await next();
             }
@@ -98,9 +95,14 @@ class FileRouter extends KoaRouter {
                     ctx.status = 400;
                     return;
                 }
-                const fileId = ctx.request.type === 'text/markdown'
-                    ? ffs.makeRegularFile(ctx.state.time, ctx.state.time, ctx.state.body) : ffs.makeDirectory(ctx.state.time, ctx.state.time, []);
-                const newRootId = ffs.updateFile(ctx.state.root, ctx.state.path[Symbol.iterator](), fileId, ctx.state.time);
+                try {
+                    assert(ctx.is('text/markdown'));
+                }
+                catch (err) {
+                    ctx.status = 406;
+                    return;
+                }
+                const newRootId = ffs.updateFile(ctx.state.root, ctx.state.path[Symbol.iterator](), ctx.state.body, ctx.state.time);
                 ctx.response.set('ROOT-FILE-ID', newRootId.toString());
                 await next();
             }

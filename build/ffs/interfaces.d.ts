@@ -23,6 +23,8 @@ export interface DirectoryContentItem {
     ctime: number;
 }
 export declare type DirectoryContent = DirectoryContentItem[];
+export declare type FileContent = RegularFileContent | DirectoryContent;
+export declare function isRegularFileContent(fileContent: FileContent): fileContent is RegularFileContent;
 export interface RegularFile extends RegularFileMetadata {
     content: RegularFileContent;
 }

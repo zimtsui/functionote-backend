@@ -3,15 +3,17 @@ import assert = require('assert');
 import {
     RegularFileContent, DirectoryContent, DirectoryContentItem,
     Directory, RegularFile,
-    DirectoryView, RegularFileView,
-    FileMetadata,
+    DirectoryView, RegularFileView, FileView,
+    FileMetadata, FileContent,
     FileType, FileId, PathIterator,
+    isRegularFileContent,
 } from './interfaces';
 import _ = require('lodash');
 
 
-export class FunctionalFileSystem {
-    constructor(private db: Sqlite.Database) { }
+
+class FunctionalFileSystemKernel {
+    constructor(protected db: Sqlite.Database) { }
 
     public getFileMetadata(id: FileId): FileMetadata {
         const row = <{
@@ -40,7 +42,7 @@ export class FunctionalFileSystem {
         };
     }
 
-    private getDirectoryContentItemByName(
+    public getDirectoryContentItemByName(
         parentId: FileId,
         childName: string,
     ): DirectoryContentItem {
@@ -70,7 +72,7 @@ export class FunctionalFileSystem {
         return row.fileCount + 1n;
     }
 
-    public makeRegularFile(
+    private makeRegularFile(
         rtime: number,
         mtime: number,
         content: RegularFileContent,
@@ -99,7 +101,7 @@ export class FunctionalFileSystem {
         return id;
     }
 
-    public makeDirectory(
+    private makeDirectory(
         rtime: number,
         mtime: number,
         content: DirectoryContent,
@@ -131,7 +133,7 @@ export class FunctionalFileSystem {
         return id;
     }
 
-    private getDirectoryContentUnsafe(id: FileId): DirectoryContent {
+    public getDirectoryContentUnsafe(id: FileId): DirectoryContent {
         const rows = <{
             childId: bigint,
             childName: string,
@@ -160,7 +162,7 @@ export class FunctionalFileSystem {
         };
     }
 
-    private getRegularFileContent(id: FileId): RegularFileContent {
+    public getRegularFileContent(id: FileId): RegularFileContent {
         const stmt = this.db.prepare(`
             SELECT content
             FROM regular_files_contents
@@ -222,7 +224,7 @@ export class FunctionalFileSystem {
         return this.getRegularFileContent(id);
     }
 
-    public retrieveFile(
+    public retrieveFileId(
         rootId: FileId,
         pathIter: PathIterator,
     ): FileId {
@@ -233,13 +235,13 @@ export class FunctionalFileSystem {
             const parentId = rootId;
             const childName = iterResult.value;
             const childId = this.getDirectoryContentItemByName(parentId, childName).id;
-            return this.retrieveFile(childId, pathIter);
+            return this.retrieveFileId(childId, pathIter);
         }
     }
 
-    public createFile(
+    protected createFileFromId(
         rootId: FileId, dirPathIter: PathIterator,
-        newFileId: FileId, newFileName: string,
+        newFileName: string, newFileId: FileId,
         creationTime: number,
     ): FileId {
         const iterResult = dirPathIter.next();
@@ -268,9 +270,9 @@ export class FunctionalFileSystem {
             assert(childItem !== undefined);
 
             const newChild: DirectoryContentItem = {
-                id: this.createFile(
+                id: this.createFileFromId(
                     childItem.id, dirPathIter,
-                    newFileId, newFileName,
+                    newFileName, newFileId,
                     creationTime,
                 ),
                 name: childItem.name,
@@ -289,7 +291,20 @@ export class FunctionalFileSystem {
         }
     }
 
-    public deleteFile(
+    protected createFile(
+        rootId: FileId, dirPathIter: PathIterator,
+        fileName: string, content: FileContent,
+        creationTime: number,
+    ): FileId {
+        const fileId = isRegularFileContent(content)
+            ? this.makeRegularFile(creationTime, creationTime, content)
+            : this.makeDirectory(creationTime, creationTime, content);
+        return this.createFileFromId(rootId, dirPathIter,
+            fileName, fileId, creationTime,
+        );
+    }
+
+    protected deleteFile(
         rootId: FileId, pathIter: PathIterator,
         deletionTime: number,
     ): FileId | null {
@@ -334,12 +349,17 @@ export class FunctionalFileSystem {
         }
     }
 
-    public updateFile(
+    protected updateFile(
         rootId: FileId, pathIter: PathIterator,
-        newFileId: FileId, updatingTime: number,
+        newFileContent: RegularFileContent,
+        updatingTime: number,
     ): FileId {
         const iterResult = pathIter.next();
         if (iterResult.done) {
+            const newFileId = this.makeRegularFile(
+                updatingTime, updatingTime,
+                newFileContent, rootId,
+            );
             return newFileId;
         } else {
             const parentId = rootId;
@@ -352,8 +372,8 @@ export class FunctionalFileSystem {
             );
             assert(child !== undefined);
 
-            const newChild: DirectoryContent[0] = {
-                id: this.updateFile(child.id, pathIter, newFileId, updatingTime),
+            const newChild: DirectoryContentItem = {
+                id: this.updateFile(child.id, pathIter, newFileContent, updatingTime),
                 name: child.name,
                 ctime: child.ctime,
             }
@@ -366,6 +386,110 @@ export class FunctionalFileSystem {
                 newParentContent, parentId,
             );
             return newParentId;
+        }
+    }
+}
+
+
+export class FunctionalFileSystem extends FunctionalFileSystemKernel {
+    private startTransaction(): void {
+        this.db.prepare(`
+            BEGIN TRANSACTION;
+        `).run();
+    }
+
+    private commitTransaction(): void {
+        this.db.prepare(`
+            COMMIT;
+        `).run();
+    }
+
+    private rollbackTransaction(): void {
+        this.db.prepare(`
+            ROLLBACK;
+        `).run();
+    }
+
+    public retrieveFileView(
+        rootId: FileId,
+        pathIter: PathIterator,
+    ): FileView {
+        const fileId = super.retrieveFileId(rootId, pathIter);
+        try {
+            const content = super.getRegularFileView(fileId);
+            return content;
+        } catch (err) {
+            const content = super.getDirectoryViewUnsafe(fileId);
+            return content;
+        }
+    }
+
+    public createFileFromId(
+        rootId: FileId, dirPathIter: PathIterator,
+        fileName: string, newFileId: FileId,
+        creationTime: number,
+    ): FileId {
+        try {
+            this.startTransaction();
+            const fileId = super.createFileFromId(
+                rootId, dirPathIter,
+                fileName, newFileId, creationTime,
+            );
+            this.commitTransaction();
+            return fileId;
+        } catch (err) {
+            this.rollbackTransaction();
+            throw err;
+        }
+    }
+
+    public createFile(
+        rootId: FileId, dirPathIter: PathIterator,
+        fileName: string, content: FileContent,
+        creationTime: number,
+    ): FileId {
+        try {
+            this.startTransaction();
+            const fileId = super.createFile(
+                rootId, dirPathIter,
+                fileName, content, creationTime,
+            );
+            this.commitTransaction();
+            return fileId;
+        } catch (err) {
+            this.rollbackTransaction();
+            throw err;
+        }
+    }
+
+    public deleteFile(
+        rootId: FileId, pathIter: PathIterator,
+        deletionTime: number,
+    ): FileId | null {
+        try {
+            this.startTransaction();
+            const fileId = super.deleteFile(rootId, pathIter, deletionTime);
+            this.commitTransaction();
+            return fileId;
+        } catch (err) {
+            this.rollbackTransaction();
+            throw err;
+        }
+    }
+
+    public updateFile(
+        rootId: FileId, pathIter: PathIterator,
+        newFileContent: RegularFileContent,
+        updatingTime: number,
+    ): FileId {
+        try {
+            this.startTransaction();
+            const fileId = super.updateFile(rootId, pathIter, newFileContent, updatingTime);
+            this.commitTransaction();
+            return fileId;
+        } catch (err) {
+            this.rollbackTransaction();
+            throw err;
         }
     }
 }
