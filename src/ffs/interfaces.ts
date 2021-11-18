@@ -60,3 +60,12 @@ export function isRegularFileContentView(fileContentView: FileView)
     : fileContentView is RegularFileView {
     return fileContentView instanceof Buffer;
 }
+
+
+// bigint
+declare global {
+    export interface BigInt {
+        toJSON(): string;
+    }
+}
+BigInt.prototype.toJSON = function () { return this.toString() }

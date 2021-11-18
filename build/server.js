@@ -15,8 +15,9 @@ class App extends Koa {
         this.users = new users_1.Users(this.db);
         this.profileMiddleware = new routes_1.ProfileRouter(this.users).routes();
         this.fileMiddleware = new routes_1.FileRouter(this.ffs, this.users).routes();
-        this.passportMiddleware = (0, auth_1.createAuthentication)(this.users);
-        this.use(this.passportMiddleware);
+        this.passport = new auth_1.Passport(this.users);
+        this.use(this.passport.initialize());
+        this.use(this.passport.authenticate('basic', { session: false }));
         this.use(async (ctx, next) => {
             if (ctx.headers['branch-id'] !== undefined)
                 await this.fileMiddleware(ctx, next);

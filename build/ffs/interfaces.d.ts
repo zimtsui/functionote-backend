@@ -42,4 +42,9 @@ interface DirectoryContentItemView {
 export declare type DirectoryView = DirectoryContentItemView[];
 export declare type FileView = RegularFileView | DirectoryView;
 export declare function isRegularFileContentView(fileContentView: FileView): fileContentView is RegularFileView;
+declare global {
+    export interface BigInt {
+        toJSON(): string;
+    }
+}
 export {};

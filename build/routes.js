@@ -6,12 +6,13 @@ const raw_body_1 = require("./raw-body");
 const _ = require("lodash");
 const assert = require("assert");
 const interfaces_1 = require("./ffs/interfaces");
+require("./ffs/interfaces");
 class ProfileRouter extends KoaRouter {
     constructor(users) {
         super();
         this.get('/branches', async (ctx, next) => {
             try {
-                ctx.body = users.getSubscriptionsView(ctx.req.user);
+                ctx.body = users.getSubscriptionsView(ctx.state.user);
             }
             catch (err) {
                 ctx.status = 404;

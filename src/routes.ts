@@ -10,6 +10,7 @@ import assert = require('assert');
 import {
     isRegularFileContentView,
 } from './ffs/interfaces';
+import './ffs/interfaces';
 
 
 export interface FileRouterState {
@@ -20,20 +21,18 @@ export interface FileRouterState {
     body: Buffer;
 }
 
-export interface ProfileRouterContext {
-    req: {
-        user: number;
-    }
+export interface ProfileRouterState {
+    user: number;
 }
 
 
-export class ProfileRouter extends KoaRouter<{}, ProfileRouterContext> {
+export class ProfileRouter extends KoaRouter<ProfileRouterState> {
     constructor(users: Users) {
         super();
 
         this.get('/branches', async (ctx, next) => {
             try {
-                ctx.body = users.getSubscriptionsView(ctx.req.user);
+                ctx.body = users.getSubscriptionsView(ctx.state.user);
             } catch (err) {
                 ctx.status = 404;
             }
@@ -42,7 +41,7 @@ export class ProfileRouter extends KoaRouter<{}, ProfileRouterContext> {
 }
 
 
-export class FileRouter extends KoaRouter<FileRouterState, ProfileRouterContext> {
+export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> {
     constructor(
         private ffs: FunctionalFileSystem,
         private users: Users,

@@ -6,6 +6,6 @@ export declare class App extends Koa {
     private users;
     private profileMiddleware;
     private fileMiddleware;
-    private passportMiddleware;
+    private passport;
     constructor();
 }

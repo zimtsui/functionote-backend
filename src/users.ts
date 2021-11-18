@@ -1,8 +1,7 @@
 import Sqlite = require('better-sqlite3');
 import assert = require('assert');
 import {
-    DirectoryContentDetails,
-    FileType, FileId,
+    FileId,
     BranchId,
     UserProfile,
     SubscriptionsView,

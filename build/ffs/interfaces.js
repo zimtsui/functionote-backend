@@ -9,4 +9,5 @@ function isRegularFileContentView(fileContentView) {
     return fileContentView instanceof Buffer;
 }
 exports.isRegularFileContentView = isRegularFileContentView;
+BigInt.prototype.toJSON = function () { return this.toString(); };
 //# sourceMappingURL=interfaces.js.map
