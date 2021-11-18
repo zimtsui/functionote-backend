@@ -57,12 +57,8 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
                 assert(typeof ctx.headers['root-file-id'] === 'string');
                 ctx.state.root = BigInt(ctx.headers['root-file-id']);
 
-                assert(typeof ctx.headers['time'] === 'string');
-                ctx.state.time = Number.parseInt(ctx.headers['time']);
-                assert(Number.isInteger(ctx.state.time));
-
                 ctx.state.body = await getRawBody(ctx.req);
-                ctx.state.path = ctx.params.path.split('/');
+                ctx.state.path = (ctx.params.path || '').split('/');
                 await next();
             } catch (err) {
                 ctx.status = 400;
@@ -95,6 +91,9 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
         this.patch('/:path+', async (ctx, next) => {
             try {
                 try {
+                    assert(typeof ctx.headers['time'] === 'string');
+                    ctx.state.time = Number.parseInt(ctx.headers['time']);
+                    assert(Number.isInteger(ctx.state.time));
                     assert(this.validateBranch(ctx.state.branch, ctx.state.root));
                 } catch (err) {
                     ctx.status = 400;
@@ -121,6 +120,9 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
         this.put('/:path+', async (ctx, next) => {
             try {
                 try {
+                    assert(typeof ctx.headers['time'] === 'string');
+                    ctx.state.time = Number.parseInt(ctx.headers['time']);
+                    assert(Number.isInteger(ctx.state.time));
                     assert(this.validateBranch(ctx.state.branch, ctx.state.root));
                 } catch (err) {
                     ctx.status = 400;
@@ -148,6 +150,9 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
         this.delete('/:path+', async (ctx, next) => {
             try {
                 try {
+                    assert(typeof ctx.headers['time'] === 'string');
+                    ctx.state.time = Number.parseInt(ctx.headers['time']);
+                    assert(Number.isInteger(ctx.state.time));
                     assert(this.validateBranch(ctx.state.branch, ctx.state.root));
                 } catch (err) {
                     ctx.status = 400;

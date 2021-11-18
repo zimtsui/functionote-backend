@@ -49,7 +49,7 @@ class FfsModel {
                 mtime,
                 rtime,
                 previous_version_id AS previousVersionId,
-                first_version_id AS firstVersionId,
+                first_version_id AS firstVersionId
             FROM files_metadata
             WHERE id = ?
         ;`).safeIntegers(true).get(id);

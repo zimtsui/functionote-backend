@@ -33,11 +33,8 @@ class FileRouter extends KoaRouter {
                 assert(Number.isInteger(ctx.state.branch));
                 assert(typeof ctx.headers['root-file-id'] === 'string');
                 ctx.state.root = BigInt(ctx.headers['root-file-id']);
-                assert(typeof ctx.headers['time'] === 'string');
-                ctx.state.time = Number.parseInt(ctx.headers['time']);
-                assert(Number.isInteger(ctx.state.time));
                 ctx.state.body = await (0, raw_body_1.getRawBody)(ctx.req);
-                ctx.state.path = ctx.params.path.split('/');
+                ctx.state.path = (ctx.params.path || '').split('/');
                 await next();
             }
             catch (err) {
@@ -69,6 +66,9 @@ class FileRouter extends KoaRouter {
         this.patch('/:path+', async (ctx, next) => {
             try {
                 try {
+                    assert(typeof ctx.headers['time'] === 'string');
+                    ctx.state.time = Number.parseInt(ctx.headers['time']);
+                    assert(Number.isInteger(ctx.state.time));
                     assert(this.validateBranch(ctx.state.branch, ctx.state.root));
                 }
                 catch (err) {
@@ -90,6 +90,9 @@ class FileRouter extends KoaRouter {
         this.put('/:path+', async (ctx, next) => {
             try {
                 try {
+                    assert(typeof ctx.headers['time'] === 'string');
+                    ctx.state.time = Number.parseInt(ctx.headers['time']);
+                    assert(Number.isInteger(ctx.state.time));
                     assert(this.validateBranch(ctx.state.branch, ctx.state.root));
                 }
                 catch (err) {
@@ -114,6 +117,9 @@ class FileRouter extends KoaRouter {
         this.delete('/:path+', async (ctx, next) => {
             try {
                 try {
+                    assert(typeof ctx.headers['time'] === 'string');
+                    ctx.state.time = Number.parseInt(ctx.headers['time']);
+                    assert(Number.isInteger(ctx.state.time));
                     assert(this.validateBranch(ctx.state.branch, ctx.state.root));
                 }
                 catch (err) {

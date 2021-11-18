@@ -4,38 +4,13 @@ import {
     RegularFileContent, DirectoryContent, DirectoryContentItem,
     Directory, RegularFile,
     DirectoryView, RegularFileView,
-    FileMetadata, FileContent,
-    FileType, FileId, PathIterator,
+    FileMetadata,
+    FileType, FileId,
 } from './interfaces';
 
 
 export abstract class FfsModel {
     constructor(protected db: Sqlite.Database) { }
-
-    public abstract retrieveFileId(
-        rootId: FileId,
-        pathIter: PathIterator,
-    ): FileId;
-    protected abstract createFileFromId(
-        rootId: FileId, dirPathIter: PathIterator,
-        newFileName: string, newFileId: FileId,
-        creationTime: number,
-    ): FileId;
-    protected abstract createFile(
-        rootId: FileId, dirPathIter: PathIterator,
-        fileName: string, content: FileContent,
-        creationTime: number,
-    ): FileId;
-    protected abstract deleteFile(
-        rootId: FileId, pathIter: PathIterator,
-        deletionTime: number,
-    ): FileId | null;
-    protected abstract updateFile(
-        rootId: FileId, pathIter: PathIterator,
-        newFileContent: RegularFileContent,
-        updatingTime: number,
-    ): FileId;
-
 
     protected makeRegularFile(
         rtime: number,
@@ -113,7 +88,7 @@ export abstract class FfsModel {
                 mtime,
                 rtime,
                 previous_version_id AS previousVersionId,
-                first_version_id AS firstVersionId,
+                first_version_id AS firstVersionId
             FROM files_metadata
             WHERE id = ?
         ;`).safeIntegers(true).get(id);
