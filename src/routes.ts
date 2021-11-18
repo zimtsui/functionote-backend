@@ -4,11 +4,12 @@ import {
 } from './interfaces';
 import { FunctionalFileSystem } from './ffs/ffs';
 import { getRawBody } from './raw-body';
-import httpAssert = require('http-assert');
-type Assert = httpAssert.AssertOK;
+import _ = require('lodash');
+import { Users } from './users';
+import assert = require('assert');
 
 
-export interface State {
+export interface FileRouterState {
     branch: BranchId;
     root: FileId;
     time: number;
@@ -16,27 +17,65 @@ export interface State {
     body: Buffer;
 }
 
+export interface ProfileRouterContext {
+    req: {
+        user: number;
+    }
+}
 
-export class Router extends KoaRouter<State> {
-    constructor(ffs: FunctionalFileSystem) {
+
+export class ProfileRouter extends KoaRouter<{}, ProfileRouterContext> {
+    constructor(users: Users) {
+        super();
+
+        this.get('/branches', async (ctx, next) => {
+            try {
+                ctx.body = users.getSubscriptionsView(ctx.req.user);
+            } catch (err) {
+                ctx.status = 404;
+            }
+        });
+    }
+}
+
+
+export class FileRouter extends KoaRouter<FileRouterState, ProfileRouterContext> {
+    constructor(
+        private ffs: FunctionalFileSystem,
+        private users: Users,
+    ) {
         super();
 
         this.all('/:path*', async (ctx, next) => {
-            // https://github.com/microsoft/TypeScript/issues/36931
-            const assert: Assert = ctx.assert;
-            assert(typeof ctx.headers['branch-id'] === 'string', 400);
-            assert(typeof ctx.headers['root-file-id'] === 'string', 400);
-            assert(typeof ctx.headers['time'] === 'string', 400);
-            ctx.state.branch = Number.parseInt(ctx.headers['branch-id']);
-            ctx.state.root = BigInt(ctx.headers['root-file-id']);
-            ctx.state.time = Number.parseInt(ctx.headers['time']);
-            ctx.state.body = await getRawBody(ctx.req);
-            ctx.state.path = ctx.params.path.split('/');
-            await next();
+            try {
+                assert(typeof ctx.headers['branch-id'] === 'string');
+                ctx.state.branch = Number.parseInt(ctx.headers['branch-id']);
+                assert(Number.isInteger(ctx.state.branch));
+
+                assert(typeof ctx.headers['root-file-id'] === 'string');
+                ctx.state.root = BigInt(ctx.headers['root-file-id']);
+                assert(Number.isInteger(ctx.state.root));
+
+                assert(typeof ctx.headers['time'] === 'string');
+                ctx.state.time = Number.parseInt(ctx.headers['time']);
+                assert(Number.isInteger(ctx.state.time));
+
+                ctx.state.body = await getRawBody(ctx.req);
+                ctx.state.path = ctx.params.path.split('/');
+                await next();
+            } catch (err) {
+                ctx.status = 400;
+            }
         });
 
         this.get('/:path*', async (ctx, next) => {
             try {
+                try {
+                    this.validateBranch(ctx.state.branch, ctx.state.root);
+                } catch (err) {
+                    ctx.status = 400;
+                    return;
+                }
                 const fileId = ffs.retrieveFile(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
@@ -57,8 +96,15 @@ export class Router extends KoaRouter<State> {
 
         this.patch('/:path+', async (ctx, next) => {
             try {
-                const path = <string[]>ctx.state.path;
-                const fileName = path.pop()!;
+                try {
+                    assert(this.validateBranch(ctx.state.branch, ctx.state.root));
+                } catch (err) {
+                    ctx.status = 400;
+                    return;
+                }
+
+                const path = _.dropRight(ctx.state.path);
+                const fileName = _.last(ctx.state.path)!;
                 const fileId = ctx.request.type === 'text/markdown'
                     ? ffs.makeRegularFile(
                         ctx.state.time,
@@ -85,6 +131,12 @@ export class Router extends KoaRouter<State> {
 
         this.put('/:path+', async (ctx, next) => {
             try {
+                try {
+                    assert(this.validateBranch(ctx.state.branch, ctx.state.root));
+                } catch (err) {
+                    ctx.status = 400;
+                    return;
+                }
                 const fileId = ctx.request.type === 'text/markdown'
                     ? ffs.makeRegularFile(
                         ctx.state.time,
@@ -110,16 +162,30 @@ export class Router extends KoaRouter<State> {
 
         this.delete('/:path+', async (ctx, next) => {
             try {
+                try {
+                    assert(this.validateBranch(ctx.state.branch, ctx.state.root));
+                } catch (err) {
+                    ctx.status = 400;
+                    return;
+                }
                 const newRootId = ffs.deleteFile(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                     ctx.state.time,
                 )!;
-                ctx.response.set('ROOT-FILE-ID', newRootId.toString());
+                ctx.set('ROOT-FILE-ID', newRootId.toString());
                 await next();
             } catch (err) {
                 ctx.status = 404;
             }
         });
+    }
+
+    private validateBranch(branchId: number, rootId: FileId): boolean {
+        const [branchFirstId, branchLatestId] =
+            this.users.getFirstAndLatestVersion(branchId);
+        const rootFirstId = this.ffs.getFileMetadata(rootId).firstVersionId;
+        assert(branchFirstId === rootFirstId);
+        return branchLatestId === rootId;
     }
 }

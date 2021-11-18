@@ -12,11 +12,17 @@ class Server extends Koa {
         super();
         this.db = new Database('./functionote.db', { fileMustExist: true });
         this.ffs = new ffs_1.FunctionalFileSystem(this.db);
-        this.router = new routes_1.Router(this.ffs);
         this.users = new users_1.Users(this.db);
-        this.passportMiddleware = (0, auth_1.createPassportMiddleware)(this.users);
+        this.profileMiddleware = new routes_1.ProfileRouter(this.users).routes();
+        this.fileMiddleware = new routes_1.FileRouter(this.ffs, this.users).routes();
+        this.passportMiddleware = (0, auth_1.createAuthentication)(this.users);
         this.use(this.passportMiddleware);
-        this.use(this.router.routes());
+        this.use(async (ctx, next) => {
+            if (typeof ctx.headers['branch-id'] === 'string')
+                await this.fileMiddleware(ctx, next);
+            else
+                await this.profileMiddleware(ctx, next);
+        });
     }
 }
 exports.Server = Server;

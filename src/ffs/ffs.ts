@@ -13,7 +13,7 @@ import _ = require('lodash');
 export class FunctionalFileSystem {
     constructor(private db: Sqlite.Database) { }
 
-    private getFileMetadata(id: FileId): FileMetadata {
+    public getFileMetadata(id: FileId): FileMetadata {
         const row = <{
             id: bigint;
             type: '-' | 'd',
@@ -63,23 +63,11 @@ export class FunctionalFileSystem {
     }
 
     private makeUniqueFileId(): FileId {
-        const stmt = this.db.prepare(`
+        const row = <{ fileCount: bigint }>this.db.prepare(`
             SELECT COUNT(*) AS fileCount
             FROM files_metadata
-        ;`).safeIntegers(true);
-        const row = <{ fileCount: bigint }>stmt.get();
+        ;`).safeIntegers(true).get();
         return row.fileCount + 1n;
-    }
-
-    private getFirstVersionId(id: FileId): FileId {
-        const stmt = this.db.prepare(`
-            SELECT first_version_id AS firstVersionId
-            FROM files_metadata
-            WHERE id = ?
-        ;`).safeIntegers(true);
-        const row = <{ firstVersionId: bigint } | undefined>stmt.get(id);
-        assert(row);
-        return row.firstVersionId;
     }
 
     public makeRegularFile(
@@ -89,29 +77,25 @@ export class FunctionalFileSystem {
         modifiedFromId?: FileId,
     ): FileId {
         const id = this.makeUniqueFileId();
-        const firstVersionId = this.getFirstVersionId(id);
-        {
-            const stmt = this.db.prepare(`
-                INSERT INTO files_metadata
-                (id, type, rtime, mtime, previous_version_id, first_version_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ;`);
-            stmt.run(
-                id,
-                '-',
-                rtime,
-                mtime,
-                modifiedFromId !== undefined ? modifiedFromId : null,
-                firstVersionId,
-            );
-        } {
-            const stmt = this.db.prepare(`
-                INSERT INTO regular_files_contents
-                (id, content)
-                VALUES (?, ?)
-            ;`);
-            stmt.run(id, content);
-        }
+        this.db.prepare(`
+            INSERT INTO files_metadata
+            (id, type, rtime, mtime, previous_version_id, first_version_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ;`).run(
+            id,
+            '-',
+            rtime,
+            mtime,
+            modifiedFromId !== undefined ? modifiedFromId : null,
+            modifiedFromId !== undefined
+                ? this.getFileMetadata(modifiedFromId).firstVersionId
+                : id,
+        );
+        this.db.prepare(`
+            INSERT INTO regular_files_contents
+            (id, content)
+            VALUES (?, ?)
+        ;`).run(id, content);
         return id;
     }
 
@@ -122,49 +106,44 @@ export class FunctionalFileSystem {
         modifiedFromId?: FileId,
     ): FileId {
         const id = this.makeUniqueFileId();
-        const firstVersionId = this.getFirstVersionId(id);
-        {
+        this.db.prepare(`
+            INSERT INTO files_metadata
+            (id, type, rtime, mtime, previous_version_id, first_version_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ;`).run(
+            id,
+            'd',
+            rtime,
+            mtime,
+            modifiedFromId !== undefined ? modifiedFromId : null,
+            modifiedFromId !== undefined
+                ? this.getFileMetadata(modifiedFromId).firstVersionId
+                : id,
+        );
+        for (const child of content) {
             const stmt = this.db.prepare(`
-                INSERT INTO files_metadata
-                (id, type, rtime, mtime, previous_version_id, first_version_id)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO directories_contents
+                (parent_id, child_id, child_name, ctime)
+                VALUES (?, ?, ?, ?)
             ;`);
-            stmt.run(
-                id,
-                'd',
-                rtime,
-                mtime,
-                modifiedFromId !== undefined ? modifiedFromId : null,
-                firstVersionId,
-            );
-        } {
-            for (const child of content) {
-                const stmt = this.db.prepare(`
-                    INSERT INTO directories_contents
-                    (parent_id, child_id, child_name, ctime)
-                    VALUES (?, ?, ?, ?)
-                ;`);
-                stmt.run(id, child.id, child.name, child.ctime);
-            }
-
+            stmt.run(id, child.id, child.name, child.ctime);
         }
         return id;
     }
 
     private getDirectoryContentUnsafe(id: FileId): DirectoryContent {
-        const stmt = this.db.prepare(`
+        const rows = <{
+            childId: bigint,
+            childName: string,
+            ctime: bigint,
+        }[]>this.db.prepare(`
             SELECT
                 child_id AS childId,
                 child_name AS childName,
                 ctime
             FROM directories_contents
             WHERE parent_id = ?
-        ;`).safeIntegers(true);
-        const rows = <{
-            childId: bigint,
-            childName: string,
-            ctime: bigint,
-        }[]>stmt.all(id);
+        ;`).safeIntegers(true).all(id);
         return rows.map(row => ({
             id: row.childId,
             name: row.childName,
@@ -261,57 +240,49 @@ export class FunctionalFileSystem {
     public createFile(
         rootId: FileId, dirPathIter: PathIterator,
         newFileId: FileId, newFileName: string,
-        ctime: number,
+        creationTime: number,
     ): FileId {
         const iterResult = dirPathIter.next();
         if (iterResult.done) {
             const parentId = rootId;
-            const parentMetadata = this.getFileMetadata(parentId);
-            assert(parentMetadata.type === 'd');
 
-            const parentContent = this.getDirectoryContentUnsafe(parentId);
-            const child = parentContent.find(
-                child => child.name === newFileName
-            );
-            assert(child === undefined);
+            const parentContent = this.getDirectory(parentId).content;
+            const childItem = parentContent.find(child => child.name === newFileName);
+            assert(childItem === undefined);
 
             const newChild: DirectoryContent[0] = {
-                id: newFileId, name: newFileName, ctime,
+                id: newFileId, name: newFileName, ctime: creationTime,
             };
-            const newParentContent = _(parentContent)
-                .push(newChild)
-                .value();
+            const newParentContent = _(parentContent).push(newChild).value();
             const newParentId = this.makeDirectory(
-                ctime, ctime, newParentContent, parentId,
+                creationTime, creationTime, newParentContent, parentId,
             );
             return newParentId;
         } else {
             const parentId = rootId;
             const childName = iterResult.value;
-            const parentMetadata = this.getFileMetadata(parentId);
 
-            const parentContent = this.getDirectoryContentUnsafe(parentId);
-            const child = parentContent.find(
-                child => child.name === childName
-            );
-            assert(child !== undefined);
+            const parentDirectory = this.getDirectory(parentId);
+            const parentContent = parentDirectory.content;
+            const childItem = parentContent.find(child => child.name === childName);
+            assert(childItem !== undefined);
 
-            const newChild: DirectoryContent[0] = {
+            const newChild: DirectoryContentItem = {
                 id: this.createFile(
-                    child.id, dirPathIter,
+                    childItem.id, dirPathIter,
                     newFileId, newFileName,
-                    ctime,
+                    creationTime,
                 ),
-                name: child.name,
-                ctime: child.ctime
+                name: childItem.name,
+                ctime: childItem.ctime
             };
             const newParentContent = _(parentContent)
-                .without(child)
+                .without(childItem)
                 .push(newChild)
                 .value();
             const newParentId = this.makeDirectory(
-                ctime,
-                parentMetadata.mtime,
+                creationTime,
+                parentDirectory.mtime,
                 newParentContent, parentId,
             );
             return newParentId;
@@ -320,7 +291,7 @@ export class FunctionalFileSystem {
 
     public deleteFile(
         rootId: FileId, pathIter: PathIterator,
-        dtime: number,
+        deletionTime: number,
     ): FileId | null {
         const iterResult = pathIter.next();
         if (iterResult.done) {
@@ -328,36 +299,34 @@ export class FunctionalFileSystem {
         } else {
             const parentId = rootId;
             const childName = iterResult.value;
-            const parentMetadata = this.getFileMetadata(parentId);
 
-            const parentContent = this.getDirectoryContentUnsafe(parentId);
-            const child = parentContent.find(
-                child => child.name === childName
-            );
-            assert(child !== undefined);
+            const parentDirectory = this.getDirectory(parentId);
+            const parentContent = parentDirectory.content;
+            const childItem = parentContent.find(child => child.name === childName);
+            assert(childItem !== undefined);
 
-            const newChildId = this.deleteFile(child.id, pathIter, dtime);
+            const newChildId = this.deleteFile(childItem.id, pathIter, deletionTime);
             if (newChildId !== null) {
-                const newChild: DirectoryContent[0] = {
+                const newChildItem: DirectoryContentItem = {
                     id: newChildId,
-                    name: child.name,
-                    ctime: child.ctime,
+                    name: childItem.name,
+                    ctime: childItem.ctime,
                 };
                 const newParentContent = _(parentContent)
-                    .without(child)
-                    .push(newChild)
+                    .without(childItem)
+                    .push(newChildItem)
                     .value();
                 const newParentId = this.makeDirectory(
-                    dtime, parentMetadata.mtime,
+                    deletionTime, parentDirectory.mtime,
                     newParentContent, parentId,
                 );
                 return newParentId;
             } else {
                 const newParentContent = _(parentContent)
-                    .without(child)
+                    .without(childItem)
                     .value();
                 const newParentId = this.makeDirectory(
-                    dtime, dtime,
+                    deletionTime, deletionTime,
                     newParentContent, parentId,
                 );
                 return newParentId;
@@ -367,7 +336,7 @@ export class FunctionalFileSystem {
 
     public updateFile(
         rootId: FileId, pathIter: PathIterator,
-        newFileId: FileId, mtime: number,
+        newFileId: FileId, updatingTime: number,
     ): FileId {
         const iterResult = pathIter.next();
         if (iterResult.done) {
@@ -384,7 +353,7 @@ export class FunctionalFileSystem {
             assert(child !== undefined);
 
             const newChild: DirectoryContent[0] = {
-                id: this.updateFile(child.id, pathIter, newFileId, mtime),
+                id: this.updateFile(child.id, pathIter, newFileId, updatingTime),
                 name: child.name,
                 ctime: child.ctime,
             }
@@ -393,7 +362,7 @@ export class FunctionalFileSystem {
                 .push(newChild)
                 .value();
             const newParentId = this.makeDirectory(
-                mtime, parentMetadata.mtime,
+                updatingTime, parentMetadata.mtime,
                 newParentContent, parentId,
             );
             return newParentId;

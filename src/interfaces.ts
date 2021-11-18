@@ -28,3 +28,8 @@ export interface UserProfile {
     name: string;
     password: string;
 }
+export type SubscriptionsView = {
+    branchId: number;
+    branchName: string;
+    latestVersionId: FileId;
+}[];

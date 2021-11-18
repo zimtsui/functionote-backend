@@ -3,13 +3,25 @@
 import KoaRouter = require('@koa/router');
 import { BranchId, FileId } from './interfaces';
 import { FunctionalFileSystem } from './ffs/ffs';
-export interface State {
+import { Users } from './users';
+export interface FileRouterState {
     branch: BranchId;
     root: FileId;
     time: number;
     path: string[];
     body: Buffer;
 }
-export declare class Router extends KoaRouter<State> {
-    constructor(ffs: FunctionalFileSystem);
+export interface ProfileRouterContext {
+    req: {
+        user: number;
+    };
+}
+export declare class ProfileRouter extends KoaRouter<{}, ProfileRouterContext> {
+    constructor(users: Users);
+}
+export declare class FileRouter extends KoaRouter<FileRouterState, ProfileRouterContext> {
+    private ffs;
+    private users;
+    constructor(ffs: FunctionalFileSystem, users: Users);
+    private validateBranch;
 }

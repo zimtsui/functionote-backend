@@ -6,15 +6,14 @@ class Users {
     constructor(db) {
         this.db = db;
     }
-    getUserProfile(name) {
-        const stmt = this.db.prepare(`
+    getUserProfileByName(name) {
+        const row = this.db.prepare(`
             SELECT
                 id,
                 password
             FROM users
             WHERE name = ?
-        ;`);
-        const row = stmt.get(name);
+        ;`).get(name);
         assert(row);
         return {
             id: row.id,
@@ -22,24 +21,38 @@ class Users {
             password: row.password,
         };
     }
-    getLatestVersion(branchId) {
-        const stmt = this.db.prepare(`
+    getSubscriptionsView(id) {
+        const rows = this.db.prepare(`
             SELECT
+                branch_id AS branchId,
+                branch_name AS branchName,
                 latest_version_id AS latestVersionId
-            FROM branches
-            WHERE id = ?
-        ;`).safeIntegers(true);
-        const row = stmt.get(branchId);
+            FROM users, subscriptions, branches
+            WHERE users.id = ? AND users.id = user_id AND branch_id = branches.id
+        ;`).safeIntegers().all(id);
+        return rows.map(row => ({
+            branchId: Number(row.branchId),
+            branchName: row.branchName,
+            latestVersionId: row.latestVersionId,
+        }));
+    }
+    getFirstAndLatestVersion(branchId) {
+        const row = this.db.prepare(`
+            SELECT
+                first_version_id AS firstVersionId,
+                latest_version_id AS latestVersionId
+            FROM branches, files_metadata
+            WHERE branches.id = ? AND latest_version_id = files_metadata.id
+        `).safeIntegers().get(branchId);
         assert(row);
-        return row.latestVersionId;
+        return [row.firstVersionId, row.latestVersionId];
     }
     setLatestVersion(branchId, fileId) {
-        const stmt = this.db.prepare(`
+        this.db.prepare(`
             UPDATE branches
             SET latest_version_id = ?
             WHERE branch_id = ?
-        ;`);
-        stmt.run(fileId, branchId);
+        ;`).run(fileId, branchId);
     }
 }
 exports.Users = Users;

@@ -14,7 +14,6 @@
     "@types/node": "^16.11.7",
     "@types/passport-http": "^0.3.9",
     "better-sqlite3": "^7.4.4",
-    "http-assert": "^1.5.0",
     "koa": "^2.13.4",
     "koa-passport": "^4.1.4",
     "lodash": "^4.17.21",

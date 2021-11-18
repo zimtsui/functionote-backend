@@ -3,11 +3,12 @@ import PassportHttp = require('passport-http');
 import { Users } from './users';
 
 
-export function createPassportMiddleware(users: Users) {
+
+export function createAuthentication(users: Users) {
     const passport = new KoaPassport.Passport();
     const basicAuth = new PassportHttp.BasicStrategy((username, password, done) => {
         try {
-            const userProfile = users.getUserProfile(username);
+            const userProfile = users.getUserProfileByName(username);
             if (password === userProfile.password)
                 done(null, userProfile.id);
             else
