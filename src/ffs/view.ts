@@ -1,13 +1,20 @@
 import {
     RegularFileContent,
-    FileView,
+    FileView, FileMetadata,
     FileContent,
     FileId, PathIterator,
+    ExternalError,
 } from './interfaces';
 import { FfsController } from './controller';
+import { Database } from 'better-sqlite3';
 
 
-export class FfsView extends FfsController {
+export class FfsView {
+    private kernel: FfsController;
+    constructor(private db: Database) {
+        this.kernel = new FfsController(db);
+    }
+
     private startTransaction(): void {
         this.db.prepare(`
             BEGIN TRANSACTION;
@@ -30,12 +37,13 @@ export class FfsView extends FfsController {
         rootId: FileId,
         pathIter: PathIterator,
     ): FileView {
-        const fileId = super.retrieveFileId(rootId, pathIter);
+        const fileId = this.kernel.retrieveFileId(rootId, pathIter);
         try {
-            const content = super.getRegularFileView(fileId);
+            const content = this.kernel.getRegularFileView(fileId);
             return content;
         } catch (err) {
-            const content = super.getDirectoryViewUnsafe(fileId);
+            if (!(err instanceof ExternalError)) throw err;
+            const content = this.kernel.getDirectoryViewUnsafe(fileId);
             return content;
         }
     }
@@ -47,7 +55,7 @@ export class FfsView extends FfsController {
     ): FileId {
         try {
             this.startTransaction();
-            const fileId = super.createFileFromId(
+            const fileId = this.kernel.createFileFromId(
                 rootId, dirPathIter,
                 fileName, newFileId, creationTime,
             );
@@ -66,7 +74,7 @@ export class FfsView extends FfsController {
     ): FileId {
         try {
             this.startTransaction();
-            const fileId = super.createFile(
+            const fileId = this.kernel.createFile(
                 rootId, dirPathIter,
                 fileName, content, creationTime,
             );
@@ -84,7 +92,7 @@ export class FfsView extends FfsController {
     ): FileId | null {
         try {
             this.startTransaction();
-            const fileId = super.deleteFile(rootId, pathIter, deletionTime);
+            const fileId = this.kernel.deleteFile(rootId, pathIter, deletionTime);
             this.commitTransaction();
             return fileId;
         } catch (err) {
@@ -100,12 +108,16 @@ export class FfsView extends FfsController {
     ): FileId {
         try {
             this.startTransaction();
-            const fileId = super.updateFile(rootId, pathIter, newFileContent, updatingTime);
+            const fileId = this.kernel.updateFile(rootId, pathIter, newFileContent, updatingTime);
             this.commitTransaction();
             return fileId;
         } catch (err) {
             this.rollbackTransaction();
             throw err;
         }
+    }
+
+    public getFileMetadata(id: FileId): FileMetadata {
+        return this.kernel.getFileMetadata(id);
     }
 }

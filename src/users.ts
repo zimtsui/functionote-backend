@@ -70,7 +70,7 @@ export class Users {
         this.db.prepare(`
             UPDATE branches
             SET latest_version_id = ?
-            WHERE branch_id = ?
+            WHERE id = ?
         ;`).run(fileId, branchId);
     }
 }

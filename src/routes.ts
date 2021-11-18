@@ -2,11 +2,12 @@ import KoaRouter = require('@koa/router');
 import {
     BranchId, FileId,
 } from './interfaces';
-import { FunctionalFileSystem } from './ffs/ffs';
+import { FunctionalFileSystem, ExternalError as FfsError } from './ffs/ffs';
 import { getRawBody } from './raw-body';
 import _ = require('lodash');
 import { Users } from './users';
 import assert = require('assert');
+import { HttpError } from './http-error';
 import {
     isRegularFileContentView,
 } from './ffs/interfaces';
@@ -50,29 +51,32 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
 
         this.all('/:path*', async (ctx, next) => {
             try {
-                assert(typeof ctx.headers['branch-id'] === 'string');
+                assert(typeof ctx.headers['branch-id'] === 'string', new HttpError(400));
                 ctx.state.branch = Number.parseInt(ctx.headers['branch-id']);
-                assert(Number.isInteger(ctx.state.branch));
+                assert(Number.isInteger(ctx.state.branch), new HttpError(400));
 
-                assert(typeof ctx.headers['root-file-id'] === 'string');
-                ctx.state.root = BigInt(ctx.headers['root-file-id']);
+                assert(typeof ctx.headers['root-file-id'] === 'string', new HttpError(400));
+                try {
+                    ctx.state.root = BigInt(ctx.headers['root-file-id']);
+                } catch (err) {
+                    throw new HttpError(400);
+                }
 
                 ctx.state.body = await getRawBody(ctx.req);
-                ctx.state.path = (ctx.params.path || '').split('/');
+                ctx.state.path = ctx.params.path
+                    ? ctx.params.path.split('/')
+                    : [];
                 await next();
             } catch (err) {
-                ctx.status = 400;
+                if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof FfsError) ctx.status = 400;
+                else throw err;
             }
         });
 
         this.get('/:path*', async (ctx, next) => {
             try {
-                try {
-                    this.validateBranch(ctx.state.branch, ctx.state.root);
-                } catch (err) {
-                    ctx.status = 400;
-                    return;
-                }
+                this.validateBranch(ctx.state.branch, ctx.state.root);
                 const content = ffs.retrieveFileView(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
@@ -84,21 +88,21 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
                     ctx.body = content;
                 await next();
             } catch (err) {
-                ctx.status = 404;
+                if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof FfsError) ctx.status = 400;
+                else throw err;
             }
         });
 
         this.patch('/:path+', async (ctx, next) => {
             try {
-                try {
-                    assert(typeof ctx.headers['time'] === 'string');
-                    ctx.state.time = Number.parseInt(ctx.headers['time']);
-                    assert(Number.isInteger(ctx.state.time));
-                    assert(this.validateBranch(ctx.state.branch, ctx.state.root));
-                } catch (err) {
-                    ctx.status = 400;
-                    return;
-                }
+                assert(typeof ctx.headers['time'] === 'string', new HttpError(400));
+                ctx.state.time = Number.parseInt(ctx.headers['time']);
+                assert(Number.isInteger(ctx.state.time), new HttpError(400));
+                assert(
+                    this.validateBranch(ctx.state.branch, ctx.state.root),
+                    new HttpError(409),
+                );
                 const path = _.dropRight(ctx.state.path);
                 const fileName = _.last(ctx.state.path)!;
                 const newRootId = ffs.createFile(
@@ -110,63 +114,66 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
                         : [],
                     ctx.state.time,
                 );
-                ctx.response.set('ROOT-FILE-ID', newRootId.toString());
+                ctx.set('Root-File-Id', newRootId.toString());
+                ctx.status = 200;
+                this.users.setLatestVersion(ctx.state.branch, newRootId);
                 await next();
             } catch (err) {
-                ctx.status = 409;
+                if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof FfsError) ctx.status = 400;
+                else throw err;
             }
         });
 
         this.put('/:path+', async (ctx, next) => {
             try {
-                try {
-                    assert(typeof ctx.headers['time'] === 'string');
-                    ctx.state.time = Number.parseInt(ctx.headers['time']);
-                    assert(Number.isInteger(ctx.state.time));
-                    assert(this.validateBranch(ctx.state.branch, ctx.state.root));
-                } catch (err) {
-                    ctx.status = 400;
-                    return;
-                }
-                try {
-                    assert(ctx.is('text/markdown'));
-                } catch (err) {
-                    ctx.status = 406;
-                    return;
-                }
+                assert(typeof ctx.headers['time'] === 'string', new HttpError(400));
+                ctx.state.time = Number.parseInt(ctx.headers['time']);
+                assert(Number.isInteger(ctx.state.time), new HttpError(400));
+                assert(
+                    this.validateBranch(ctx.state.branch, ctx.state.root),
+                    new HttpError(409),
+                );
+                assert(ctx.is('text/markdown'), new HttpError(406));
                 const newRootId = ffs.updateFile(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                     ctx.state.body,
                     ctx.state.time,
                 );
-                ctx.response.set('ROOT-FILE-ID', newRootId.toString());
+                ctx.set('Root-File-Id', newRootId.toString());
+                ctx.status = 200;
+                this.users.setLatestVersion(ctx.state.branch, newRootId);
                 await next();
             } catch (err) {
-                ctx.status = 404;
+                if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof FfsError) ctx.status = 400;
+                else throw err;
             }
         });
 
         this.delete('/:path+', async (ctx, next) => {
             try {
-                try {
-                    assert(typeof ctx.headers['time'] === 'string');
-                    ctx.state.time = Number.parseInt(ctx.headers['time']);
-                    assert(Number.isInteger(ctx.state.time));
-                    assert(this.validateBranch(ctx.state.branch, ctx.state.root));
-                } catch (err) {
-                    ctx.status = 400;
-                    return;
-                }
+                assert(typeof ctx.headers['time'] === 'string', new HttpError(400));
+                ctx.state.time = Number.parseInt(ctx.headers['time']);
+                assert(Number.isInteger(ctx.state.time), new HttpError(400));
+                assert(
+                    this.validateBranch(ctx.state.branch, ctx.state.root),
+                    new HttpError(409),
+                );
                 const newRootId = ffs.deleteFile(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                     ctx.state.time,
                 )!;
-                ctx.set('ROOT-FILE-ID', newRootId.toString());
+                ctx.set('Root-File-Id', newRootId.toString());
+                ctx.status = 200;
+                this.users.setLatestVersion(ctx.state.branch, newRootId);
                 await next();
             } catch (err) {
-                ctx.status = 404;
+                if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof FfsError) ctx.status = 400;
+                else throw err;
             }
         });
     }
@@ -175,7 +182,7 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
         const [branchFirstId, branchLatestId] =
             this.users.getFirstAndLatestVersion(branchId);
         const rootFirstId = this.ffs.getFileMetadata(rootId).firstVersionId;
-        assert(branchFirstId === rootFirstId);
+        assert(branchFirstId === rootFirstId, new HttpError(400));
         return branchLatestId === rootId;
     }
 }

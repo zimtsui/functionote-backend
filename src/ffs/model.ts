@@ -6,6 +6,7 @@ import {
     DirectoryView, RegularFileView,
     FileMetadata,
     FileType, FileId,
+    ExternalError,
 } from './interfaces';
 
 
@@ -92,7 +93,7 @@ export abstract class FfsModel {
             FROM files_metadata
             WHERE id = ?
         ;`).safeIntegers(true).get(id);
-        assert(row);
+        assert(row, new ExternalError());
         return {
             ...row,
             mtime: Number(row.mtime),
@@ -114,7 +115,7 @@ export abstract class FfsModel {
             FROM directories_contents
             WHERE parent_id = ? AND child_name = ?
         ;`).safeIntegers(true).get(parentId, childName);
-        assert(row);
+        assert(row, new ExternalError());
         return {
             id: row.childId,
             name: childName,
@@ -152,7 +153,7 @@ export abstract class FfsModel {
 
     public getDirectory(id: FileId): Directory {
         const fileMetadata = this.getFileMetadata(id);
-        assert(fileMetadata.type === 'd');
+        assert(fileMetadata.type === 'd', new ExternalError());
         return {
             ...fileMetadata,
             content: this.getDirectoryContentUnsafe(id),
@@ -166,7 +167,7 @@ export abstract class FfsModel {
             WHERE id = ?
         ;`);
         const row = <{ content: Buffer } | undefined>stmt.get(id);
-        assert(row);
+        assert(row, new ExternalError());
         return row.content;
     }
 
@@ -190,7 +191,7 @@ export abstract class FfsModel {
             firstVersionId: bigint;
             content: Buffer;
         } | undefined>stmt.get(id);
-        assert(row);
+        assert(row, new ExternalError());
         return {
             id,
             ...row,

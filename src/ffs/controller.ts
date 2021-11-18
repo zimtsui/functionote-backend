@@ -1,15 +1,16 @@
 import assert = require('assert');
 import {
-    RegularFileContent, DirectoryContent, DirectoryContentItem,
+    RegularFileContent, DirectoryContentItem,
     FileContent,
     FileId, PathIterator,
     isRegularFileContent,
+    ExternalError,
 } from './interfaces';
 import _ = require('lodash');
 import { FfsModel } from './model';
 
 
-export abstract class FfsController extends FfsModel {
+export class FfsController extends FfsModel {
     public retrieveFileId(
         rootId: FileId,
         pathIter: PathIterator,
@@ -25,7 +26,7 @@ export abstract class FfsController extends FfsModel {
         }
     }
 
-    protected createFileFromId(
+    public createFileFromId(
         rootId: FileId, dirPathIter: PathIterator,
         newFileName: string, newFileId: FileId,
         creationTime: number,
@@ -36,9 +37,9 @@ export abstract class FfsController extends FfsModel {
 
             const parentContent = this.getDirectory(parentId).content;
             const childItem = parentContent.find(child => child.name === newFileName);
-            assert(childItem === undefined);
+            assert(childItem === undefined, new ExternalError());
 
-            const newChild: DirectoryContent[0] = {
+            const newChild: DirectoryContentItem = {
                 id: newFileId, name: newFileName, ctime: creationTime,
             };
             const newParentContent = _(parentContent).push(newChild).value();
@@ -53,7 +54,7 @@ export abstract class FfsController extends FfsModel {
             const parentDirectory = this.getDirectory(parentId);
             const parentContent = parentDirectory.content;
             const childItem = parentContent.find(child => child.name === childName);
-            assert(childItem !== undefined);
+            assert(childItem !== undefined, new ExternalError());
 
             const newChild: DirectoryContentItem = {
                 id: this.createFileFromId(
@@ -77,7 +78,7 @@ export abstract class FfsController extends FfsModel {
         }
     }
 
-    protected createFile(
+    public createFile(
         rootId: FileId, dirPathIter: PathIterator,
         fileName: string, content: FileContent,
         creationTime: number,
@@ -90,7 +91,7 @@ export abstract class FfsController extends FfsModel {
         );
     }
 
-    protected deleteFile(
+    public deleteFile(
         rootId: FileId, pathIter: PathIterator,
         deletionTime: number,
     ): FileId | null {
@@ -104,7 +105,7 @@ export abstract class FfsController extends FfsModel {
             const parentDirectory = this.getDirectory(parentId);
             const parentContent = parentDirectory.content;
             const childItem = parentContent.find(child => child.name === childName);
-            assert(childItem !== undefined);
+            assert(childItem !== undefined, new ExternalError());
 
             const newChildId = this.deleteFile(childItem.id, pathIter, deletionTime);
             if (newChildId !== null) {
@@ -135,7 +136,7 @@ export abstract class FfsController extends FfsModel {
         }
     }
 
-    protected updateFile(
+    public updateFile(
         rootId: FileId, pathIter: PathIterator,
         newFileContent: RegularFileContent,
         updatingTime: number,
@@ -156,7 +157,7 @@ export abstract class FfsController extends FfsModel {
             const child = parentContent.find(
                 child => child.name === newChildName
             );
-            assert(child !== undefined);
+            assert(child !== undefined, new ExternalError());
 
             const newChild: DirectoryContentItem = {
                 id: this.updateFile(child.id, pathIter, newFileContent, updatingTime),
