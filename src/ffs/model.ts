@@ -6,8 +6,10 @@ import {
     DirectoryView, RegularFileView,
     FileMetadata,
     FileType, FileId,
-    ExternalError,
 } from './interfaces';
+import {
+    ErrorFileNotFound,
+} from './exceptions';
 
 
 export abstract class FfsModel {
@@ -93,7 +95,7 @@ export abstract class FfsModel {
             FROM files_metadata
             WHERE id = ?
         ;`).safeIntegers(true).get(id);
-        assert(row, new ExternalError());
+        assert(row, new ErrorFileNotFound());
         return {
             ...row,
             mtime: Number(row.mtime),
@@ -115,7 +117,7 @@ export abstract class FfsModel {
             FROM directories_contents
             WHERE parent_id = ? AND child_name = ?
         ;`).safeIntegers(true).get(parentId, childName);
-        assert(row, new ExternalError());
+        assert(row, new ErrorFileNotFound());
         return {
             id: row.childId,
             name: childName,
@@ -153,7 +155,7 @@ export abstract class FfsModel {
 
     public getDirectory(id: FileId): Directory {
         const fileMetadata = this.getFileMetadata(id);
-        assert(fileMetadata.type === 'd', new ExternalError());
+        assert(fileMetadata.type === 'd', new ErrorFileNotFound());
         return {
             ...fileMetadata,
             content: this.getDirectoryContentUnsafe(id),
@@ -167,7 +169,7 @@ export abstract class FfsModel {
             WHERE id = ?
         ;`);
         const row = <{ content: Buffer } | undefined>stmt.get(id);
-        assert(row, new ExternalError());
+        assert(row, new ErrorFileNotFound());
         return row.content;
     }
 
@@ -191,7 +193,7 @@ export abstract class FfsModel {
             firstVersionId: bigint;
             content: Buffer;
         } | undefined>stmt.get(id);
-        assert(row, new ExternalError());
+        assert(row, new ErrorFileNotFound());
         return {
             id,
             ...row,

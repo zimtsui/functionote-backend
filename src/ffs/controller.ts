@@ -4,10 +4,13 @@ import {
     FileContent,
     FileId, PathIterator,
     isRegularFileContent,
-    ExternalError,
 } from './interfaces';
 import _ = require('lodash');
 import { FfsModel } from './model';
+import {
+    ErrorFileAlreadyExists,
+    ErrorFileNotFound,
+} from './exceptions';
 
 
 export class FfsController extends FfsModel {
@@ -37,7 +40,7 @@ export class FfsController extends FfsModel {
 
             const parentContent = this.getDirectory(parentId).content;
             const childItem = parentContent.find(child => child.name === newFileName);
-            assert(childItem === undefined, new ExternalError());
+            assert(childItem === undefined, new ErrorFileAlreadyExists());
 
             const newChild: DirectoryContentItem = {
                 id: newFileId, name: newFileName, ctime: creationTime,
@@ -54,7 +57,7 @@ export class FfsController extends FfsModel {
             const parentDirectory = this.getDirectory(parentId);
             const parentContent = parentDirectory.content;
             const childItem = parentContent.find(child => child.name === childName);
-            assert(childItem !== undefined, new ExternalError());
+            assert(childItem !== undefined, new ErrorFileNotFound());
 
             const newChild: DirectoryContentItem = {
                 id: this.createFileFromId(
@@ -105,7 +108,7 @@ export class FfsController extends FfsModel {
             const parentDirectory = this.getDirectory(parentId);
             const parentContent = parentDirectory.content;
             const childItem = parentContent.find(child => child.name === childName);
-            assert(childItem !== undefined, new ExternalError());
+            assert(childItem !== undefined, new ErrorFileNotFound());
 
             const newChildId = this.deleteFile(childItem.id, pathIter, deletionTime);
             if (newChildId !== null) {
@@ -157,7 +160,7 @@ export class FfsController extends FfsModel {
             const child = parentContent.find(
                 child => child.name === newChildName
             );
-            assert(child !== undefined, new ExternalError());
+            assert(child !== undefined, new ErrorFileNotFound());
 
             const newChild: DirectoryContentItem = {
                 id: this.updateFile(child.id, pathIter, newFileContent, updatingTime),

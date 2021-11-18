@@ -2,7 +2,12 @@ import KoaRouter = require('@koa/router');
 import {
     BranchId, FileId,
 } from './interfaces';
-import { FunctionalFileSystem, ExternalError as FfsError } from './ffs/ffs';
+import {
+    FunctionalFileSystem,
+    ExternalError as FfsError,
+    ErrorFileNotFound,
+    ErrorFileAlreadyExists,
+} from './ffs/ffs';
 import { getRawBody } from './raw-body';
 import _ = require('lodash');
 import { Users } from './users';
@@ -32,11 +37,8 @@ export class ProfileRouter extends KoaRouter<ProfileRouterState> {
         super();
 
         this.get('/branches', async (ctx, next) => {
-            try {
-                ctx.body = users.getSubscriptionsView(ctx.state.user);
-            } catch (err) {
-                ctx.status = 404;
-            }
+            ctx.body = users.getSubscriptionsView(ctx.state.user);
+            await next();
         });
     }
 }
@@ -89,6 +91,8 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
+                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }
@@ -120,6 +124,8 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
+                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }
@@ -147,6 +153,8 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
+                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }
@@ -172,6 +180,8 @@ export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> 
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
+                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
+                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }

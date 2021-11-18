@@ -14,4 +14,5 @@ exports.FunctionalFileSystem = void 0;
 var view_1 = require("./view");
 Object.defineProperty(exports, "FunctionalFileSystem", { enumerable: true, get: function () { return view_1.FfsView; } });
 __exportStar(require("./interfaces"), exports);
+__exportStar(require("./exceptions"), exports);
 //# sourceMappingURL=ffs.js.map

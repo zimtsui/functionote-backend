@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FfsModel = void 0;
 const assert = require("assert");
-const interfaces_1 = require("./interfaces");
+const exceptions_1 = require("./exceptions");
 class FfsModel {
     constructor(db) {
         this.db = db;
@@ -54,7 +54,7 @@ class FfsModel {
             FROM files_metadata
             WHERE id = ?
         ;`).safeIntegers(true).get(id);
-        assert(row, new interfaces_1.ExternalError());
+        assert(row, new exceptions_1.ErrorFileNotFound());
         return {
             ...row,
             mtime: Number(row.mtime),
@@ -69,7 +69,7 @@ class FfsModel {
             FROM directories_contents
             WHERE parent_id = ? AND child_name = ?
         ;`).safeIntegers(true).get(parentId, childName);
-        assert(row, new interfaces_1.ExternalError());
+        assert(row, new exceptions_1.ErrorFileNotFound());
         return {
             id: row.childId,
             name: childName,
@@ -100,7 +100,7 @@ class FfsModel {
     }
     getDirectory(id) {
         const fileMetadata = this.getFileMetadata(id);
-        assert(fileMetadata.type === 'd', new interfaces_1.ExternalError());
+        assert(fileMetadata.type === 'd', new exceptions_1.ErrorFileNotFound());
         return {
             ...fileMetadata,
             content: this.getDirectoryContentUnsafe(id),
@@ -113,7 +113,7 @@ class FfsModel {
             WHERE id = ?
         ;`);
         const row = stmt.get(id);
-        assert(row, new interfaces_1.ExternalError());
+        assert(row, new exceptions_1.ErrorFileNotFound());
         return row.content;
     }
     getRegularFile(id) {
@@ -129,7 +129,7 @@ class FfsModel {
             WHERE id = ?
         ;`).safeIntegers(true);
         const row = stmt.get(id);
-        assert(row, new interfaces_1.ExternalError());
+        assert(row, new exceptions_1.ErrorFileNotFound());
         return {
             id,
             ...row,

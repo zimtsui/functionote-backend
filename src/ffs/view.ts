@@ -3,10 +3,12 @@ import {
     FileView, FileMetadata,
     FileContent,
     FileId, PathIterator,
-    ExternalError,
 } from './interfaces';
 import { FfsController } from './controller';
 import { Database } from 'better-sqlite3';
+import {
+    ExternalError,
+} from './exceptions';
 
 
 export class FfsView {

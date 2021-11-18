@@ -5,6 +5,7 @@ const assert = require("assert");
 const interfaces_1 = require("./interfaces");
 const _ = require("lodash");
 const model_1 = require("./model");
+const exceptions_1 = require("./exceptions");
 class FfsController extends model_1.FfsModel {
     retrieveFileId(rootId, pathIter) {
         const iterResult = pathIter.next();
@@ -24,7 +25,7 @@ class FfsController extends model_1.FfsModel {
             const parentId = rootId;
             const parentContent = this.getDirectory(parentId).content;
             const childItem = parentContent.find(child => child.name === newFileName);
-            assert(childItem === undefined, new interfaces_1.ExternalError());
+            assert(childItem === undefined, new exceptions_1.ErrorFileAlreadyExists());
             const newChild = {
                 id: newFileId, name: newFileName, ctime: creationTime,
             };
@@ -38,7 +39,7 @@ class FfsController extends model_1.FfsModel {
             const parentDirectory = this.getDirectory(parentId);
             const parentContent = parentDirectory.content;
             const childItem = parentContent.find(child => child.name === childName);
-            assert(childItem !== undefined, new interfaces_1.ExternalError());
+            assert(childItem !== undefined, new exceptions_1.ErrorFileNotFound());
             const newChild = {
                 id: this.createFileFromId(childItem.id, dirPathIter, newFileName, newFileId, creationTime),
                 name: childItem.name,
@@ -69,7 +70,7 @@ class FfsController extends model_1.FfsModel {
             const parentDirectory = this.getDirectory(parentId);
             const parentContent = parentDirectory.content;
             const childItem = parentContent.find(child => child.name === childName);
-            assert(childItem !== undefined, new interfaces_1.ExternalError());
+            assert(childItem !== undefined, new exceptions_1.ErrorFileNotFound());
             const newChildId = this.deleteFile(childItem.id, pathIter, deletionTime);
             if (newChildId !== null) {
                 const newChildItem = {
@@ -105,7 +106,7 @@ class FfsController extends model_1.FfsModel {
             const parentMetadata = this.getFileMetadata(parentId);
             const parentContent = this.getDirectoryContentUnsafe(parentId);
             const child = parentContent.find(child => child.name === newChildName);
-            assert(child !== undefined, new interfaces_1.ExternalError());
+            assert(child !== undefined, new exceptions_1.ErrorFileNotFound());
             const newChild = {
                 id: this.updateFile(child.id, pathIter, newFileContent, updatingTime),
                 name: child.name,

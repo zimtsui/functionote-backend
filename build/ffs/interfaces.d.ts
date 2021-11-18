@@ -47,6 +47,4 @@ declare global {
         toJSON(): string;
     }
 }
-export declare class ExternalError extends Error {
-}
 export {};

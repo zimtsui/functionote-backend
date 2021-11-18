@@ -13,12 +13,8 @@ class ProfileRouter extends KoaRouter {
     constructor(users) {
         super();
         this.get('/branches', async (ctx, next) => {
-            try {
-                ctx.body = users.getSubscriptionsView(ctx.state.user);
-            }
-            catch (err) {
-                ctx.status = 404;
-            }
+            ctx.body = users.getSubscriptionsView(ctx.state.user);
+            await next();
         });
     }
 }
@@ -70,6 +66,10 @@ class FileRouter extends KoaRouter {
             catch (err) {
                 if (err instanceof http_error_1.HttpError)
                     ctx.status = err.status;
+                else if (err instanceof ffs_1.ErrorFileNotFound)
+                    ctx.status = 404;
+                else if (err instanceof ffs_1.ErrorFileAlreadyExists)
+                    ctx.status = 409;
                 else if (err instanceof ffs_1.ExternalError)
                     ctx.status = 400;
                 else
@@ -95,6 +95,10 @@ class FileRouter extends KoaRouter {
             catch (err) {
                 if (err instanceof http_error_1.HttpError)
                     ctx.status = err.status;
+                else if (err instanceof ffs_1.ErrorFileNotFound)
+                    ctx.status = 404;
+                else if (err instanceof ffs_1.ErrorFileAlreadyExists)
+                    ctx.status = 409;
                 else if (err instanceof ffs_1.ExternalError)
                     ctx.status = 400;
                 else
@@ -117,6 +121,10 @@ class FileRouter extends KoaRouter {
             catch (err) {
                 if (err instanceof http_error_1.HttpError)
                     ctx.status = err.status;
+                else if (err instanceof ffs_1.ErrorFileNotFound)
+                    ctx.status = 404;
+                else if (err instanceof ffs_1.ErrorFileAlreadyExists)
+                    ctx.status = 409;
                 else if (err instanceof ffs_1.ExternalError)
                     ctx.status = 400;
                 else
@@ -138,6 +146,10 @@ class FileRouter extends KoaRouter {
             catch (err) {
                 if (err instanceof http_error_1.HttpError)
                     ctx.status = err.status;
+                else if (err instanceof ffs_1.ErrorFileNotFound)
+                    ctx.status = 404;
+                else if (err instanceof ffs_1.ErrorFileAlreadyExists)
+                    ctx.status = 409;
                 else if (err instanceof ffs_1.ExternalError)
                     ctx.status = 400;
                 else

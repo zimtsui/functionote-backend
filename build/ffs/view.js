@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FfsView = void 0;
-const interfaces_1 = require("./interfaces");
 const controller_1 = require("./controller");
+const exceptions_1 = require("./exceptions");
 class FfsView {
     constructor(db) {
         this.db = db;
@@ -30,7 +30,7 @@ class FfsView {
             return content;
         }
         catch (err) {
-            if (!(err instanceof interfaces_1.ExternalError))
+            if (!(err instanceof exceptions_1.ExternalError))
                 throw err;
             const content = this.kernel.getDirectoryViewUnsafe(fileId);
             return content;
