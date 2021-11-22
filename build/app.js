@@ -17,7 +17,11 @@ class App extends Koa {
         this.users = new users_1.Users(this.db);
         this.router = new router_1.Router(this.ffs, this.users);
         this.passport = new auth_1.Passport(this.users);
-        this.use(Cors());
+        this.use(Cors({
+            origin: 'http://localhost:1234',
+            exposeHeaders: ['Root-File-Id'],
+            credentials: true,
+        }));
         this.use(Session({
             signed: false,
             overwrite: false,

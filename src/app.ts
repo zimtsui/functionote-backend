@@ -17,7 +17,11 @@ export class App extends Koa {
 
     constructor() {
         super();
-        this.use(Cors());
+        this.use(Cors({
+            origin: 'http://localhost:1234',
+            exposeHeaders: ['Root-File-Id'],
+            credentials: true,
+        }));
         this.use(Session({
             signed: false,
             overwrite: false,
