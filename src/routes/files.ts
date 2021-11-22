@@ -1,22 +1,22 @@
 import KoaRouter = require('@koa/router');
 import {
     BranchId, FileId,
-} from './interfaces';
+} from '../interfaces';
 import {
     FunctionalFileSystem,
     ExternalError as FfsError,
     ErrorFileNotFound,
     ErrorFileAlreadyExists,
-} from './ffs/ffs';
-import { getRawBody } from './raw-body';
+} from '../ffs/ffs';
+import { getRawBody } from '../raw-body';
 import _ = require('lodash');
-import { Users } from './users';
+import { Users } from '../users';
 import assert = require('assert');
-import { HttpError } from './http-error';
+import { HttpError } from '../http-error';
 import {
     isRegularFileContentView,
-} from './ffs/interfaces';
-import './ffs/interfaces';
+} from '../ffs/interfaces';
+import '../ffs/interfaces';
 
 
 export interface FileRouterState {
@@ -27,24 +27,8 @@ export interface FileRouterState {
     body: Buffer;
 }
 
-export interface ProfileRouterState {
-    user: number;
-}
 
-
-export class ProfileRouter extends KoaRouter<ProfileRouterState> {
-    constructor(users: Users) {
-        super();
-
-        this.get('/branches', async (ctx, next) => {
-            ctx.body = users.getSubscriptionsView(ctx.state.user);
-            await next();
-        });
-    }
-}
-
-
-export class FileRouter extends KoaRouter<FileRouterState & ProfileRouterState> {
+export class FileRouter extends KoaRouter<FileRouterState> {
     constructor(
         private ffs: FunctionalFileSystem,
         private users: Users,
