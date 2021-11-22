@@ -22,9 +22,15 @@ export class App extends Koa {
             signed: false,
             overwrite: false,
         }, this));
-        this.use(this.passport.initialize());
+
+        this.use(async (ctx, next) => {
+            ctx.state.user = 1;
+            await next();
+        })
+        // this.use(this.passport.initialize());
         // this.use(this.passport.session());
         // this.use(this.passport.authenticate('basic', { session: true }));
+
         this.use(this.router.routes());
     }
 }

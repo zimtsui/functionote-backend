@@ -9,8 +9,8 @@ class Router extends KoaRouter {
         super();
         this.fileRouter = new files_1.FileRouter(ffs, users);
         this.subscriptionRouter = new subscriptions_1.SubscriptionRouter(users);
-        this.use('/files', this.fileRouter.routes());
         this.use('/subscriptions', this.subscriptionRouter.routes());
+        this.use('/files', this.fileRouter.routes());
     }
 }
 exports.Router = Router;

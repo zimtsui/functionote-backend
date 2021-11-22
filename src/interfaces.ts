@@ -33,3 +33,8 @@ export type SubscriptionsView = {
     branchName: string;
     latestVersionId: FileId;
 }[];
+
+
+export interface AuthState {
+    user: number;
+}

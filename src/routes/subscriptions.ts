@@ -1,13 +1,9 @@
 import KoaRouter = require('@koa/router');
 import { Users } from '../users';
+import { AuthState } from '../interfaces';
 
 
-export interface SubscriptionRouterState {
-    user: number;
-}
-
-
-export class SubscriptionRouter extends KoaRouter<SubscriptionRouterState> {
+export class SubscriptionRouter extends KoaRouter<AuthState> {
     constructor(users: Users) {
         super();
 
