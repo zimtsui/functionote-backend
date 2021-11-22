@@ -4,7 +4,6 @@ import Database = require('better-sqlite3');
 import { FunctionalFileSystem } from './ffs/ffs';
 import { Passport } from './auth';
 import { Users } from './users';
-import KoaRouter = require('@koa/router');
 
 
 export class App extends Koa {
