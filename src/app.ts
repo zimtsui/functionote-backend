@@ -7,12 +7,6 @@ import { Users } from './users';
 import KoaRouter = require('@koa/router');
 
 
-type KoaRouterContext<
-    StateT = Koa.DefaultState,
-    ContextT = Koa.DefaultContext,
-    > = Parameters<KoaRouter.Middleware<StateT, ContextT>>[0];
-
-
 export class App extends Koa {
     private db = new Database('../functionote.db', { fileMustExist: true });
     private ffs = new FunctionalFileSystem(this.db);
