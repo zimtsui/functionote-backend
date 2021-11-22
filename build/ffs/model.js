@@ -7,13 +7,13 @@ class FfsModel {
     constructor(db) {
         this.db = db;
     }
-    makeRegularFile(rtime, mtime, content, modifiedFromId) {
+    makeRegularFile(rmtime, mtime, content, modifiedFromId) {
         const id = this.makeUniqueFileId();
         this.db.prepare(`
             INSERT INTO files_metadata
-            (id, type, rtime, mtime, previous_version_id, first_version_id)
+            (id, type, rmtime, mtime, previous_version_id, first_version_id)
             VALUES (?, ?, ?, ?, ?, ?)
-        ;`).run(id, '-', rtime, mtime, modifiedFromId !== undefined ? modifiedFromId : null, modifiedFromId !== undefined
+        ;`).run(id, '-', rmtime, mtime, modifiedFromId !== undefined ? modifiedFromId : null, modifiedFromId !== undefined
             ? this.getFileMetadata(modifiedFromId).firstVersionId
             : id);
         this.db.prepare(`
@@ -23,22 +23,22 @@ class FfsModel {
         ;`).run(id, content);
         return id;
     }
-    makeDirectory(rtime, mtime, content, modifiedFromId) {
+    makeDirectory(rmtime, mtime, content, modifiedFromId) {
         const id = this.makeUniqueFileId();
         this.db.prepare(`
             INSERT INTO files_metadata
-            (id, type, rtime, mtime, previous_version_id, first_version_id)
+            (id, type, rmtime, mtime, previous_version_id, first_version_id)
             VALUES (?, ?, ?, ?, ?, ?)
-        ;`).run(id, 'd', rtime, mtime, modifiedFromId !== undefined ? modifiedFromId : null, modifiedFromId !== undefined
+        ;`).run(id, 'd', rmtime, mtime, modifiedFromId !== undefined ? modifiedFromId : null, modifiedFromId !== undefined
             ? this.getFileMetadata(modifiedFromId).firstVersionId
             : id);
         for (const child of content) {
             const stmt = this.db.prepare(`
                 INSERT INTO directories_contents
-                (parent_id, child_id, child_name, ctime)
+                (parent_id, child_id, child_name, btime)
                 VALUES (?, ?, ?, ?)
             ;`);
-            stmt.run(id, child.id, child.name, child.ctime);
+            stmt.run(id, child.id, child.name, child.btime);
         }
         return id;
     }
@@ -48,7 +48,7 @@ class FfsModel {
                 id,
                 type,
                 mtime,
-                rtime,
+                rmtime,
                 previous_version_id AS previousVersionId,
                 first_version_id AS firstVersionId
             FROM files_metadata
@@ -58,14 +58,14 @@ class FfsModel {
         return {
             ...row,
             mtime: Number(row.mtime),
-            rtime: Number(row.rtime),
+            rmtime: Number(row.rmtime),
         };
     }
     getDirectoryContentItemByName(parentId, childName) {
         const row = this.db.prepare(`
             SELECT
                 child_id AS childId,
-                ctime
+                btime
             FROM directories_contents
             WHERE parent_id = ? AND child_name = ?
         ;`).safeIntegers(true).get(parentId, childName);
@@ -73,7 +73,7 @@ class FfsModel {
         return {
             id: row.childId,
             name: childName,
-            ctime: Number(row.ctime),
+            btime: Number(row.btime),
         };
     }
     makeUniqueFileId() {
@@ -88,14 +88,14 @@ class FfsModel {
             SELECT
                 child_id AS childId,
                 child_name AS childName,
-                ctime
+                btime
             FROM directories_contents
             WHERE parent_id = ?
         ;`).safeIntegers(true).all(id);
         return rows.map(row => ({
             id: row.childId,
             name: row.childName,
-            ctime: Number(row.ctime),
+            btime: Number(row.btime),
         }));
     }
     getDirectory(id) {
@@ -121,7 +121,7 @@ class FfsModel {
             SELECT
                 type,
                 mtime,
-                rtime,
+                rmtime,
                 previous_version_id AS previousVersionId,
                 first_version_id AS firstVersionId,
                 content
@@ -134,7 +134,7 @@ class FfsModel {
             id,
             ...row,
             mtime: Number(row.mtime),
-            rtime: Number(row.rtime),
+            rmtime: Number(row.rmtime),
         };
     }
     getDirectoryViewUnsafe(id) {
@@ -142,8 +142,8 @@ class FfsModel {
             SELECT
                 child_name AS name,
                 type,
-                mtime,
-                ctime
+                rmtime,
+                btime
             FROM subdirectories, files_metadata
             WHERE parent_id = ? AND child_id = id
         ;`).all(id);

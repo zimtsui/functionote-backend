@@ -16,7 +16,7 @@ export abstract class FfsModel {
     constructor(protected db: Sqlite.Database) { }
 
     protected makeRegularFile(
-        rtime: number,
+        rmtime: number,
         mtime: number,
         content: RegularFileContent,
         modifiedFromId?: FileId,
@@ -24,12 +24,12 @@ export abstract class FfsModel {
         const id = this.makeUniqueFileId();
         this.db.prepare(`
             INSERT INTO files_metadata
-            (id, type, rtime, mtime, previous_version_id, first_version_id)
+            (id, type, rmtime, mtime, previous_version_id, first_version_id)
             VALUES (?, ?, ?, ?, ?, ?)
         ;`).run(
             id,
             '-',
-            rtime,
+            rmtime,
             mtime,
             modifiedFromId !== undefined ? modifiedFromId : null,
             modifiedFromId !== undefined
@@ -45,7 +45,7 @@ export abstract class FfsModel {
     }
 
     protected makeDirectory(
-        rtime: number,
+        rmtime: number,
         mtime: number,
         content: DirectoryContent,
         modifiedFromId?: FileId,
@@ -53,12 +53,12 @@ export abstract class FfsModel {
         const id = this.makeUniqueFileId();
         this.db.prepare(`
             INSERT INTO files_metadata
-            (id, type, rtime, mtime, previous_version_id, first_version_id)
+            (id, type, rmtime, mtime, previous_version_id, first_version_id)
             VALUES (?, ?, ?, ?, ?, ?)
         ;`).run(
             id,
             'd',
-            rtime,
+            rmtime,
             mtime,
             modifiedFromId !== undefined ? modifiedFromId : null,
             modifiedFromId !== undefined
@@ -68,10 +68,10 @@ export abstract class FfsModel {
         for (const child of content) {
             const stmt = this.db.prepare(`
                 INSERT INTO directories_contents
-                (parent_id, child_id, child_name, ctime)
+                (parent_id, child_id, child_name, btime)
                 VALUES (?, ?, ?, ?)
             ;`);
-            stmt.run(id, child.id, child.name, child.ctime);
+            stmt.run(id, child.id, child.name, child.btime);
         }
         return id;
     }
@@ -81,7 +81,7 @@ export abstract class FfsModel {
             id: bigint;
             type: '-' | 'd',
             mtime: bigint,
-            rtime: bigint,
+            rmtime: bigint,
             previousVersionId: bigint,
             firstVersionId: bigint,
         } | undefined>this.db.prepare(`
@@ -89,7 +89,7 @@ export abstract class FfsModel {
                 id,
                 type,
                 mtime,
-                rtime,
+                rmtime,
                 previous_version_id AS previousVersionId,
                 first_version_id AS firstVersionId
             FROM files_metadata
@@ -99,7 +99,7 @@ export abstract class FfsModel {
         return {
             ...row,
             mtime: Number(row.mtime),
-            rtime: Number(row.rtime),
+            rmtime: Number(row.rmtime),
         };
     }
 
@@ -109,11 +109,11 @@ export abstract class FfsModel {
     ): DirectoryContentItem {
         const row = <{
             childId: bigint;
-            ctime: bigint;
+            btime: bigint;
         } | undefined>this.db.prepare(`
             SELECT
                 child_id AS childId,
-                ctime
+                btime
             FROM directories_contents
             WHERE parent_id = ? AND child_name = ?
         ;`).safeIntegers(true).get(parentId, childName);
@@ -121,7 +121,7 @@ export abstract class FfsModel {
         return {
             id: row.childId,
             name: childName,
-            ctime: Number(row.ctime),
+            btime: Number(row.btime),
         };
     }
 
@@ -137,19 +137,19 @@ export abstract class FfsModel {
         const rows = <{
             childId: bigint,
             childName: string,
-            ctime: bigint,
+            btime: bigint,
         }[]>this.db.prepare(`
             SELECT
                 child_id AS childId,
                 child_name AS childName,
-                ctime
+                btime
             FROM directories_contents
             WHERE parent_id = ?
         ;`).safeIntegers(true).all(id);
         return rows.map(row => ({
             id: row.childId,
             name: row.childName,
-            ctime: Number(row.ctime),
+            btime: Number(row.btime),
         }));
     }
 
@@ -178,7 +178,7 @@ export abstract class FfsModel {
             SELECT
                 type,
                 mtime,
-                rtime,
+                rmtime,
                 previous_version_id AS previousVersionId,
                 first_version_id AS firstVersionId,
                 content
@@ -188,7 +188,7 @@ export abstract class FfsModel {
         const row = <{
             type: '-';
             mtime: bigint;
-            rtime: bigint;
+            rmtime: bigint;
             previousVersionId: bigint;
             firstVersionId: bigint;
             content: Buffer;
@@ -198,7 +198,7 @@ export abstract class FfsModel {
             id,
             ...row,
             mtime: Number(row.mtime),
-            rtime: Number(row.rtime),
+            rmtime: Number(row.rmtime),
         };
     }
 
@@ -206,14 +206,14 @@ export abstract class FfsModel {
         const rows = <{
             name: string;
             type: FileType;
-            mtime: number;
-            ctime: number;
+            rmtime: number;
+            btime: number;
         }[]>this.db.prepare(`
             SELECT
                 child_name AS name,
                 type,
-                mtime,
-                ctime
+                rmtime,
+                btime
             FROM subdirectories, files_metadata
             WHERE parent_id = ? AND child_id = id
         ;`).all(id);

@@ -27,7 +27,7 @@ class FfsController extends model_1.FfsModel {
             const childItem = parentContent.find(child => child.name === newFileName);
             assert(childItem === undefined, new exceptions_1.ErrorFileAlreadyExists());
             const newChild = {
-                id: newFileId, name: newFileName, ctime: creationTime,
+                id: newFileId, name: newFileName, btime: creationTime,
             };
             const newParentContent = _(parentContent).push(newChild).value();
             const newParentId = this.makeDirectory(creationTime, creationTime, newParentContent, parentId);
@@ -43,7 +43,7 @@ class FfsController extends model_1.FfsModel {
             const newChild = {
                 id: this.createFileFromId(childItem.id, dirPathIter, newFileName, newFileId, creationTime),
                 name: childItem.name,
-                ctime: childItem.ctime
+                btime: childItem.btime
             };
             const newParentContent = _(parentContent)
                 .without(childItem)
@@ -76,7 +76,7 @@ class FfsController extends model_1.FfsModel {
                 const newChildItem = {
                     id: newChildId,
                     name: childItem.name,
-                    ctime: childItem.ctime,
+                    btime: childItem.btime,
                 };
                 const newParentContent = _(parentContent)
                     .without(childItem)
@@ -110,7 +110,7 @@ class FfsController extends model_1.FfsModel {
             const newChild = {
                 id: this.updateFile(child.id, pathIter, newFileContent, updatingTime),
                 name: child.name,
-                ctime: child.ctime,
+                btime: child.btime,
             };
             const newParentContent = _(parentContent)
                 .without(child)

@@ -3,8 +3,8 @@ import { RegularFileContent, DirectoryContent, DirectoryContentItem, Directory, 
 export declare abstract class FfsModel {
     protected db: Sqlite.Database;
     constructor(db: Sqlite.Database);
-    protected makeRegularFile(rtime: number, mtime: number, content: RegularFileContent, modifiedFromId?: FileId): FileId;
-    protected makeDirectory(rtime: number, mtime: number, content: DirectoryContent, modifiedFromId?: FileId): FileId;
+    protected makeRegularFile(rmtime: number, mtime: number, content: RegularFileContent, modifiedFromId?: FileId): FileId;
+    protected makeDirectory(rmtime: number, mtime: number, content: DirectoryContent, modifiedFromId?: FileId): FileId;
     getFileMetadata(id: FileId): FileMetadata;
     getDirectoryContentItemByName(parentId: FileId, childName: string): DirectoryContentItem;
     protected makeUniqueFileId(): FileId;

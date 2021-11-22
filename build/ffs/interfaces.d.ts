@@ -5,7 +5,7 @@ export declare type PathIterator = Iterator<string>;
 interface FileGenericMetadata {
     id: FileId;
     mtime: number;
-    rtime: number;
+    rmtime: number;
     previousVersionId: FileId;
     firstVersionId: FileId;
 }
@@ -20,7 +20,7 @@ export declare type RegularFileContent = Buffer;
 export interface DirectoryContentItem {
     id: FileId;
     name: string;
-    ctime: number;
+    btime: number;
 }
 export declare type DirectoryContent = DirectoryContentItem[];
 export declare type FileContent = RegularFileContent | DirectoryContent;
@@ -36,8 +36,8 @@ export declare type RegularFileView = RegularFileContent;
 interface DirectoryContentItemView {
     name: string;
     type: FileType;
-    ctime: number;
-    mtime: number;
+    btime: number;
+    rmtime: number;
 }
 export declare type DirectoryView = DirectoryContentItemView[];
 export declare type FileView = RegularFileView | DirectoryView;
