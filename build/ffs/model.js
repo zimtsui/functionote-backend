@@ -144,7 +144,7 @@ class FfsModel {
                 type,
                 rmtime,
                 btime
-            FROM subdirectories, files_metadata
+            FROM directories_contents, files_metadata
             WHERE parent_id = ? AND child_id = id
         ;`).all(id);
         return rows;

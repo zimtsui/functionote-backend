@@ -1,4 +1,5 @@
 /// <reference types="koa-passport" />
+/// <reference types="koa-session" />
 import Koa = require('koa');
 export declare class App extends Koa {
     private db;

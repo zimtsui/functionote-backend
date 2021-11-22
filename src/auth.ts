@@ -18,5 +18,8 @@ export class Passport extends KoaPassport.KoaPassport {
             }
         });
         this.use(basicAuth);
+
+        this.serializeUser((user, done) => done(null, user));
+        this.deserializeUser((id: string, done) => done(null, JSON.parse(id)));
     }
 }

@@ -4,6 +4,8 @@ import Database = require('better-sqlite3');
 import { FunctionalFileSystem } from './ffs/ffs';
 import { Passport } from './auth';
 import { Users } from './users';
+import Cors = require('@koa/cors');
+import Session = require('koa-session');
 
 
 export class App extends Koa {
@@ -15,8 +17,14 @@ export class App extends Koa {
 
     constructor() {
         super();
+        this.use(Cors());
+        this.use(Session({
+            signed: false,
+            overwrite: false,
+        }, this));
         this.use(this.passport.initialize());
-        this.use(this.passport.authenticate('basic', { session: false }));
+        // this.use(this.passport.session());
+        // this.use(this.passport.authenticate('basic', { session: true }));
         this.use(this.router.routes());
     }
 }
