@@ -1,7 +1,7 @@
 import Koa = require('koa');
 import { Router } from './routes/router';
 import Database = require('better-sqlite3');
-import { FunctionalFileSystem } from './ffs/ffs';
+import { FunctionalFileSystem } from 'ffs';
 import { Passport } from './auth';
 import { Users } from './users';
 import Cors = require('@koa/cors');
@@ -31,9 +31,9 @@ export class App extends Koa {
             ctx.state.user = 1;
             await next();
         })
-        // this.use(this.passport.initialize());
-        // this.use(this.passport.session());
-        // this.use(this.passport.authenticate('basic', { session: true }));
+        this.use(this.passport.initialize());
+        this.use(this.passport.session());
+        this.use(this.passport.authenticate('basic', { session: true }));
 
         this.use(this.router.routes());
     }

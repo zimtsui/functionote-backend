@@ -4,7 +4,7 @@ exports.App = void 0;
 const Koa = require("koa");
 const router_1 = require("./routes/router");
 const Database = require("better-sqlite3");
-const ffs_1 = require("./ffs/ffs");
+const ffs_1 = require("ffs");
 const auth_1 = require("./auth");
 const users_1 = require("./users");
 const Cors = require("@koa/cors");
@@ -30,9 +30,9 @@ class App extends Koa {
             ctx.state.user = 1;
             await next();
         });
-        // this.use(this.passport.initialize());
-        // this.use(this.passport.session());
-        // this.use(this.passport.authenticate('basic', { session: true }));
+        this.use(this.passport.initialize());
+        this.use(this.passport.session());
+        this.use(this.passport.authenticate('basic', { session: true }));
         this.use(this.router.routes());
     }
 }

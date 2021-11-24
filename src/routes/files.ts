@@ -1,27 +1,24 @@
 import KoaRouter = require('@koa/router');
 import {
-    BranchId, FileId,
+    BranchId,
 } from '../interfaces';
+import { FnodeId } from 'ffs';
 import {
     FunctionalFileSystem,
     ExternalError as FfsError,
-    ErrorFileNotFound,
-    ErrorFileAlreadyExists,
-} from '../ffs/ffs';
+    FileNotFound as FfsFileNotFound,
+    FileAlreadyExists as FfsFileAlreadyExists,
+} from 'ffs';
 import { getRawBody } from '../raw-body';
 import _ = require('lodash');
 import { Users } from '../users';
 import assert = require('assert');
 import { HttpError } from '../http-error';
-import {
-    isRegularFileContentView,
-} from '../ffs/interfaces';
-import '../ffs/interfaces';
 
 
 export interface FileRouterState {
     branch: BranchId;
-    root: FileId;
+    root: FnodeId;
     time: number;
     path: string[];
     body: Buffer;
@@ -30,7 +27,7 @@ export interface FileRouterState {
 
 export class FileRouter extends KoaRouter<FileRouterState> {
     constructor(
-        private ffs: FunctionalFileSystem,
+        ffs: FunctionalFileSystem,
         private users: Users,
     ) {
         super();
@@ -63,20 +60,20 @@ export class FileRouter extends KoaRouter<FileRouterState> {
         this.get('/:path*', async (ctx, next) => {
             try {
                 this.validateBranch(ctx.state.branch, ctx.state.root);
-                const content = ffs.retrieveFileView(
+                const fileView = ffs.getFileView(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                 );
-                if (isRegularFileContentView(content)) {
-                    ctx.body = content.toString();
+                if (fileView instanceof Buffer) {
+                    ctx.body = fileView.toString();
                     ctx.type = 'text/markdown';
                 } else
-                    ctx.body = content;
+                    ctx.body = fileView;
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
-                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
-                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
+                else if (err instanceof FfsFileNotFound) ctx.status = 404;
+                else if (err instanceof FfsFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }
@@ -87,29 +84,30 @@ export class FileRouter extends KoaRouter<FileRouterState> {
                 assert(typeof ctx.headers['time'] === 'string', new HttpError(400));
                 ctx.state.time = Number.parseInt(ctx.headers['time']);
                 assert(Number.isInteger(ctx.state.time), new HttpError(400));
-                assert(
-                    this.validateBranch(ctx.state.branch, ctx.state.root),
-                    new HttpError(409),
-                );
+                this.validateBranch(ctx.state.branch, ctx.state.root);
                 const path = _.dropRight(ctx.state.path);
                 const fileName = _.last(ctx.state.path)!;
-                const newRootId = ffs.createFile(
-                    ctx.state.root,
-                    path[Symbol.iterator](),
-                    fileName,
-                    ctx.is('text/markdown')
-                        ? ctx.state.body
-                        : [],
-                    ctx.state.time,
-                );
-                ctx.set('Root-File-Id', newRootId.toString());
+                const newRoot = ctx.is('text/markdown')
+                    ? ffs.makeRegularFileByContent(
+                        ctx.state.root,
+                        path[Symbol.iterator](),
+                        fileName,
+                        ctx.state.body,
+                        ctx.state.time,
+                    ) : ffs.makeEmptyDirectory(
+                        ctx.state.root,
+                        path[Symbol.iterator](),
+                        fileName,
+                        ctx.state.time,
+                    );
+                ctx.set('Root-File-Id', newRoot.toString());
                 ctx.status = 200;
-                this.users.setLatestVersion(ctx.state.branch, newRootId);
+                this.users.setLatestVersion(ctx.state.branch, newRoot);
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
-                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
-                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
+                else if (err instanceof FfsFileNotFound) ctx.status = 404;
+                else if (err instanceof FfsFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }
@@ -120,25 +118,22 @@ export class FileRouter extends KoaRouter<FileRouterState> {
                 assert(typeof ctx.headers['time'] === 'string', new HttpError(400));
                 ctx.state.time = Number.parseInt(ctx.headers['time']);
                 assert(Number.isInteger(ctx.state.time), new HttpError(400));
-                assert(
-                    this.validateBranch(ctx.state.branch, ctx.state.root),
-                    new HttpError(409),
-                );
+                this.validateBranch(ctx.state.branch, ctx.state.root);
                 assert(ctx.is('text/markdown'), new HttpError(406));
-                const newRootId = ffs.updateFile(
+                const newRoot = ffs.modifyRegularFileContent(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                     ctx.state.body,
                     ctx.state.time,
                 );
-                ctx.set('Root-File-Id', newRootId.toString());
+                ctx.set('Root-File-Id', newRoot.toString());
                 ctx.status = 200;
-                this.users.setLatestVersion(ctx.state.branch, newRootId);
+                this.users.setLatestVersion(ctx.state.branch, newRoot);
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
-                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
-                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
+                else if (err instanceof FfsFileNotFound) ctx.status = 404;
+                else if (err instanceof FfsFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }
@@ -149,34 +144,28 @@ export class FileRouter extends KoaRouter<FileRouterState> {
                 assert(typeof ctx.headers['time'] === 'string', new HttpError(400));
                 ctx.state.time = Number.parseInt(ctx.headers['time']);
                 assert(Number.isInteger(ctx.state.time), new HttpError(400));
-                assert(
-                    this.validateBranch(ctx.state.branch, ctx.state.root),
-                    new HttpError(409),
-                );
-                const newRootId = ffs.deleteFile(
+                this.validateBranch(ctx.state.branch, ctx.state.root);
+                const newRoot = ffs.removeFile(
                     ctx.state.root,
                     ctx.state.path[Symbol.iterator](),
                     ctx.state.time,
                 )!;
-                ctx.set('Root-File-Id', newRootId.toString());
+                ctx.set('Root-File-Id', newRoot.toString());
                 ctx.status = 200;
-                this.users.setLatestVersion(ctx.state.branch, newRootId);
+                this.users.setLatestVersion(ctx.state.branch, newRoot);
                 await next();
             } catch (err) {
                 if (err instanceof HttpError) ctx.status = err.status;
-                else if (err instanceof ErrorFileNotFound) ctx.status = 404;
-                else if (err instanceof ErrorFileAlreadyExists) ctx.status = 409;
+                else if (err instanceof FfsFileNotFound) ctx.status = 404;
+                else if (err instanceof FfsFileAlreadyExists) ctx.status = 409;
                 else if (err instanceof FfsError) ctx.status = 400;
                 else throw err;
             }
         });
     }
 
-    private validateBranch(branchId: number, rootId: FileId): boolean {
-        const [branchFirstId, branchLatestId] =
-            this.users.getFirstAndLatestVersion(branchId);
-        const rootFirstId = this.ffs.getFileMetadata(rootId).firstVersionId;
-        assert(branchFirstId === rootFirstId, new HttpError(400));
-        return branchLatestId === rootId;
+    private validateBranch(branchId: number, rootId: FnodeId): void {
+        const branchLatestId = this.users.getLatestVersion(branchId);
+        assert(branchLatestId === rootId, new HttpError(409));
     }
 }

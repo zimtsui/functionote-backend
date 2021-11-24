@@ -1,12 +1,11 @@
 import Sqlite = require('better-sqlite3');
 import assert = require('assert');
 import {
-    FileId,
     BranchId,
     UserProfile,
     SubscriptionsView,
 } from './interfaces';
-import _ = require('lodash');
+import { FnodeId } from 'ffs';
 
 
 export class Users {
@@ -51,22 +50,20 @@ export class Users {
         }));
     }
 
-    public getFirstAndLatestVersion(branchId: BranchId): [FileId, FileId] {
+    public getLatestVersion(branchId: BranchId): FnodeId {
         const row = <{
-            firstVersionId: bigint;
             latestVersionId: bigint;
         } | undefined>this.db.prepare(`
             SELECT
-                first_version_id AS firstVersionId,
                 latest_version_id AS latestVersionId
             FROM branches, files_metadata
             WHERE branches.id = ? AND latest_version_id = files_metadata.id
         `).safeIntegers().get(branchId);
         assert(row);
-        return [row.firstVersionId, row.latestVersionId];
+        return row.latestVersionId;
     }
 
-    public setLatestVersion(branchId: BranchId, fileId: FileId): void {
+    public setLatestVersion(branchId: BranchId, fileId: FnodeId): void {
         this.db.prepare(`
             UPDATE branches
             SET latest_version_id = ?

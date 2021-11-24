@@ -36,16 +36,15 @@ class Users {
             latestVersionId: row.latestVersionId,
         }));
     }
-    getFirstAndLatestVersion(branchId) {
+    getLatestVersion(branchId) {
         const row = this.db.prepare(`
             SELECT
-                first_version_id AS firstVersionId,
                 latest_version_id AS latestVersionId
             FROM branches, files_metadata
             WHERE branches.id = ? AND latest_version_id = files_metadata.id
         `).safeIntegers().get(branchId);
         assert(row);
-        return [row.firstVersionId, row.latestVersionId];
+        return row.latestVersionId;
     }
     setLatestVersion(branchId, fileId) {
         this.db.prepare(`

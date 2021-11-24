@@ -17,6 +17,7 @@
     "@types/node": "^16.11.7",
     "@types/passport-http": "^0.3.9",
     "better-sqlite3": "^7.4.4",
+    "ffs": "github:zimtsui/ffs",
     "koa": "^2.13.4",
     "koa-passport": "^4.1.4",
     "koa-session": "^6.2.0",

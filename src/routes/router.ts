@@ -1,15 +1,17 @@
 import KoaRouter = require('@koa/router');
-import { FunctionalFileSystem } from '../ffs/ffs';
+import { FunctionalFileSystem } from 'ffs';
 import { Users } from '../users';
 import { FileRouter, FileRouterState } from './files'
-import { SubscriptionRouter } from './subscriptions';
-import { AuthState } from '../interfaces';
 
 
-type RouterState = AuthState & FileRouterState;
+type RouterState = KoaStateAuth & FileRouterState;
+interface KoaStateAuth {
+    user: number;
+}
+
+
 export class Router extends KoaRouter<RouterState> {
     private fileRouter: FileRouter;
-    private subscriptionRouter: SubscriptionRouter;
 
     constructor(
         ffs: FunctionalFileSystem,
@@ -17,9 +19,7 @@ export class Router extends KoaRouter<RouterState> {
     ) {
         super();
         this.fileRouter = new FileRouter(ffs, users);
-        this.subscriptionRouter = new SubscriptionRouter(users);
 
-        this.use('/subscriptions', this.subscriptionRouter.routes());
         this.use('/files', this.fileRouter.routes());
     }
 }
