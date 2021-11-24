@@ -13,16 +13,10 @@ class FileRouter extends KoaRouter {
         this.users = users;
         this.all('/:path*', async (ctx, next) => {
             try {
-                assert(typeof ctx.headers['branch-id'] === 'string', new http_error_1.HttpError(400));
-                ctx.state.branch = Number.parseInt(ctx.headers['branch-id']);
-                assert(Number.isInteger(ctx.state.branch), new http_error_1.HttpError(400));
-                assert(typeof ctx.headers['root-file-id'] === 'string', new http_error_1.HttpError(400));
-                try {
-                    ctx.state.root = BigInt(ctx.headers['root-file-id']);
-                }
-                catch (err) {
-                    throw new http_error_1.HttpError(400);
-                }
+                ctx.state.branch = Number(ctx.headers['branch-id']);
+                assert(Number.isSafeInteger(ctx.state.branch), new http_error_1.HttpError(400));
+                ctx.state.root = Number(ctx.headers['root-file-id']);
+                assert(Number.isSafeInteger(ctx.state.root), new http_error_1.HttpError(400));
                 ctx.state.body = await (0, raw_body_1.getRawBody)(ctx.req);
                 ctx.state.path = ctx.params.path
                     ? ctx.params.path.split('/')
@@ -65,9 +59,8 @@ class FileRouter extends KoaRouter {
         });
         this.patch('/:path+', async (ctx, next) => {
             try {
-                assert(typeof ctx.headers['time'] === 'string', new http_error_1.HttpError(400));
-                ctx.state.time = Number.parseInt(ctx.headers['time']);
-                assert(Number.isInteger(ctx.state.time), new http_error_1.HttpError(400));
+                ctx.state.time = Number(ctx.headers['time']);
+                assert(Number.isSafeInteger(ctx.state.time), new http_error_1.HttpError(400));
                 this.validateBranch(ctx.state.branch, ctx.state.root);
                 const path = _.dropRight(ctx.state.path);
                 const fileName = _.last(ctx.state.path);
@@ -93,9 +86,8 @@ class FileRouter extends KoaRouter {
         });
         this.put('/:path+', async (ctx, next) => {
             try {
-                assert(typeof ctx.headers['time'] === 'string', new http_error_1.HttpError(400));
-                ctx.state.time = Number.parseInt(ctx.headers['time']);
-                assert(Number.isInteger(ctx.state.time), new http_error_1.HttpError(400));
+                ctx.state.time = Number(ctx.headers['time']);
+                assert(Number.isSafeInteger(ctx.state.time), new http_error_1.HttpError(400));
                 this.validateBranch(ctx.state.branch, ctx.state.root);
                 assert(ctx.is('text/markdown'), new http_error_1.HttpError(406));
                 const newRoot = ffs.modifyRegularFileContent(ctx.state.root, ctx.state.path[Symbol.iterator](), ctx.state.body, ctx.state.time);
@@ -119,9 +111,8 @@ class FileRouter extends KoaRouter {
         });
         this.delete('/:path+', async (ctx, next) => {
             try {
-                assert(typeof ctx.headers['time'] === 'string', new http_error_1.HttpError(400));
-                ctx.state.time = Number.parseInt(ctx.headers['time']);
-                assert(Number.isInteger(ctx.state.time), new http_error_1.HttpError(400));
+                ctx.state.time = Number(ctx.headers['time']);
+                assert(Number.isSafeInteger(ctx.state.time), new http_error_1.HttpError(400));
                 this.validateBranch(ctx.state.branch, ctx.state.root);
                 const newRoot = ffs.removeFile(ctx.state.root, ctx.state.path[Symbol.iterator](), ctx.state.time);
                 ctx.set('Root-File-Id', newRoot.toString());

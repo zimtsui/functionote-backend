@@ -32,9 +32,9 @@ export class Users {
 
     public getSubscriptionsView(id: number): SubscriptionsView {
         const rows = <{
-            branchId: bigint;
+            branchId: number;
             branchName: string;
-            latestVersionId: bigint;
+            latestVersionId: number;
         }[]>this.db.prepare(`
             SELECT
                 branch_id AS branchId,
@@ -42,23 +42,19 @@ export class Users {
                 latest_version_id AS latestVersionId
             FROM users, subscriptions, branches
             WHERE users.id = ? AND users.id = user_id AND branch_id = branches.id
-        ;`).safeIntegers().all(id);
-        return rows.map(row => ({
-            branchId: Number(row.branchId),
-            branchName: row.branchName,
-            latestVersionId: row.latestVersionId,
-        }));
+        ;`).all(id);
+        return rows;
     }
 
     public getLatestVersion(branchId: BranchId): FnodeId {
         const row = <{
-            latestVersionId: bigint;
+            latestVersionId: number;
         } | undefined>this.db.prepare(`
             SELECT
                 latest_version_id AS latestVersionId
-            FROM branches, files_metadata
-            WHERE branches.id = ? AND latest_version_id = files_metadata.id
-        `).safeIntegers().get(branchId);
+            FROM branches
+            WHERE branches.id = ?
+        `).get(branchId);
         assert(row);
         return row.latestVersionId;
     }

@@ -9,7 +9,7 @@ import Session = require('koa-session');
 
 
 export class App extends Koa {
-    private db = new Database('../functionote.db', { fileMustExist: true });
+    private db = new Database('./functionote.db', { fileMustExist: true });
     private ffs = new FunctionalFileSystem(this.db);
     private users = new Users(this.db);
     private router = new Router(this.ffs, this.users);

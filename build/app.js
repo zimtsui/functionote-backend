@@ -12,7 +12,7 @@ const Session = require("koa-session");
 class App extends Koa {
     constructor() {
         super();
-        this.db = new Database('../functionote.db', { fileMustExist: true });
+        this.db = new Database('./functionote.db', { fileMustExist: true });
         this.ffs = new ffs_1.FunctionalFileSystem(this.db);
         this.users = new users_1.Users(this.db);
         this.router = new router_1.Router(this.ffs, this.users);

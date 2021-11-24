@@ -29,20 +29,16 @@ class Users {
                 latest_version_id AS latestVersionId
             FROM users, subscriptions, branches
             WHERE users.id = ? AND users.id = user_id AND branch_id = branches.id
-        ;`).safeIntegers().all(id);
-        return rows.map(row => ({
-            branchId: Number(row.branchId),
-            branchName: row.branchName,
-            latestVersionId: row.latestVersionId,
-        }));
+        ;`).all(id);
+        return rows;
     }
     getLatestVersion(branchId) {
         const row = this.db.prepare(`
             SELECT
                 latest_version_id AS latestVersionId
-            FROM branches, files_metadata
-            WHERE branches.id = ? AND latest_version_id = files_metadata.id
-        `).safeIntegers().get(branchId);
+            FROM branches
+            WHERE branches.id = ?
+        `).get(branchId);
         assert(row);
         return row.latestVersionId;
     }

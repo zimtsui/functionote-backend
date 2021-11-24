@@ -1,7 +1,9 @@
 /// <reference types="koa__router" />
 import KoaRouter = require('@koa/router');
 import { Users } from '../users';
-import { AuthState } from '../interfaces';
-export declare class SubscriptionRouter extends KoaRouter<AuthState> {
+export interface KoaStateAuth {
+    user: number;
+}
+export declare class SubscriptionRouter extends KoaRouter<KoaStateAuth> {
     constructor(users: Users);
 }
