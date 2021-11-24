@@ -9,19 +9,18 @@ import Session = require('koa-session');
 
 
 export class App extends Koa {
-    private db = new Database('./functionote.db', { fileMustExist: true });
     private ffs = new FunctionalFileSystem(this.db);
     private users = new Users(this.db);
     private router = new Router(this.ffs, this.users);
     private passport = new Passport(this.users);
 
-    constructor() {
+    constructor(private db: Database.Database) {
         super();
-        this.use(Cors({
-            origin: 'http://localhost:1234',
-            exposeHeaders: ['Root-File-Id'],
-            credentials: true,
-        }));
+        // this.use(Cors({
+        //     origin: 'http://localhost:1234',
+        //     exposeHeaders: ['Root-File-Id'],
+        //     credentials: true,
+        // }));
         this.use(Session({
             signed: false,
             overwrite: false,
