@@ -6,21 +6,6 @@ class Users {
     constructor(db) {
         this.db = db;
     }
-    getUserProfileByName(name) {
-        const row = this.db.prepare(`
-            SELECT
-                id,
-                password
-            FROM users
-            WHERE name = ?
-        ;`).get(name);
-        assert(row);
-        return {
-            id: row.id,
-            name,
-            password: row.password,
-        };
-    }
     getSubscriptionsView(id) {
         const rows = this.db.prepare(`
             SELECT

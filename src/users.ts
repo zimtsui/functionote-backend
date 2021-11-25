@@ -2,7 +2,6 @@ import Sqlite = require('better-sqlite3');
 import assert = require('assert');
 import {
     BranchId,
-    UserProfile,
     SubscriptionsView,
 } from './interfaces';
 import { FnodeId } from 'ffs';
@@ -10,25 +9,6 @@ import { FnodeId } from 'ffs';
 
 export class Users {
     constructor(private db: Sqlite.Database) { }
-
-    public getUserProfileByName(name: string): UserProfile {
-        const row = <{
-            id: number;
-            password: string;
-        }>this.db.prepare(`
-            SELECT
-                id,
-                password
-            FROM users
-            WHERE name = ?
-        ;`).get(name);
-        assert(row);
-        return {
-            id: row.id,
-            name,
-            password: row.password,
-        }
-    }
 
     public getSubscriptionsView(id: number): SubscriptionsView {
         const rows = <{

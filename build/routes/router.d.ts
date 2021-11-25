@@ -1,13 +1,13 @@
 /// <reference types="koa__router" />
 import KoaRouter = require('@koa/router');
 import { FunctionalFileSystem } from 'ffs';
-import { Users } from '../users';
 import { FileRouterState } from './files';
 import { KoaStateAuth } from './subscriptions';
+import Database = require('better-sqlite3');
 declare type RouterState = KoaStateAuth & FileRouterState;
 export declare class Router extends KoaRouter<RouterState> {
     private fileRouter;
     private s10nRouter;
-    constructor(ffs: FunctionalFileSystem, users: Users);
+    constructor(db: Database.Database, ffs: FunctionalFileSystem);
 }
 export {};
