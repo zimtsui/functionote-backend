@@ -23,6 +23,7 @@
   "scripts": {
     "build": "tsc -b ./src/tsconfig.json",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build-dev": "tsc -b ./dev/src/tsconfig.json",
     "dev": "tsc -b ./dev/src/tsconfig.json && node --enable-source-maps ./dev/build/server.js"
   },
   "author": "Zim"

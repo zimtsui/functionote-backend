@@ -1,13 +1,11 @@
 import Koa = require('koa');
 import { Router } from '../..';
 import Database = require('better-sqlite3');
-import { FunctionalFileSystem } from 'ffs';
 import Cors = require('@koa/cors');
 
 
 export class App extends Koa {
-    private ffs = new FunctionalFileSystem(this.db);
-    private router = new Router(this.db, this.ffs);
+    private router = new Router(this.db);
 
     constructor(private db: Database.Database) {
         super();

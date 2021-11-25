@@ -14,10 +14,11 @@ export class Router extends KoaRouter<RouterState> {
 
     constructor(
         db: Database.Database,
-        ffs: FunctionalFileSystem,
     ) {
         super();
         const users = new Users(db);
+        const ffs = new FunctionalFileSystem(db);
+
         this.fileRouter = new FileRouter(ffs, users);
         this.s10nRouter = new S10nRouter(users);
 
